@@ -1,0 +1,7 @@
+1>------ Build started: Project: AGSWaves, Configuration: Release Win32 ------
+1>Compiling...
+1>strangeland.cpp
+1>c1xx : fatal error C1083: Cannot open compiler intermediate file: 'C:\Users\DUALNA~1\AppData\Local\Temp\_CL_e92fcc6dex': Invalid argument
+1>Build log was saved at "file://c:\Users\Dualnames\Desktop\BLEND\ags-master\Plugins\Strangeland\vc2008\Release\BuildLog.htm"
+1>AGSWaves - 1 error(s), 0 warning(s)
+========== Build: 0 succeeded, 1 failed, 0 up-to-date, 0 skipped ==========
