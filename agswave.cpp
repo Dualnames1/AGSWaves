@@ -2012,6 +2012,318 @@ void BlendTwoSprites(int graphic, int refgraphic)
 }
 
 
+int BlendColor (int Ln,int Bn)
+{
+	return ((Ln < 128) ? (2 * Bn * Ln/ 255):(255 - 2 * (255 - Bn) * (255 - Ln) / 255));
+}
+
+int BlendColorScreen(int Ln,int Bn)
+{
+	return (255 - (((255 - Bn) * (255 - Ln)) >> 8));
+}
+
+
+void Blend(int graphic, int refgraphic, bool screen)
+{
+  BITMAP* src = engine->GetSpriteGraphic(graphic);
+  int src_width=640;
+  int src_height=360;
+  int src_depth=32;
+  engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+  unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
+
+
+  BITMAP* refsrc = engine->GetSpriteGraphic(refgraphic);
+  int refsrc_width=640;
+  int refsrc_height=360;
+  int refsrc_depth=32;
+  engine->GetBitmapDimensions(refsrc,&refsrc_width,&refsrc_height,&refsrc_depth);
+  unsigned int** refsprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(refsrc);
+  engine->ReleaseBitmapSurface(refsrc);
+
+  int x, y;
+  
+  
+  for (y = 0; y < src_height; y++)
+  {
+    for (x = 0; x < src_width; x++)//
+	{
+		int getColor=sprite_pixels[y][x];
+		int rn=getRcolor(getColor);
+		int gn=getGcolor(getColor);
+		int bn=getBcolor(getColor);
+		int an=getAcolor(getColor);
+
+        
+
+
+		if (an >= 0.0 && rn >4 && gn>4 && bn>4 )
+		{
+			int getColor2=refsprite_pixels[y][x];
+			int rj=getRcolor(getColor2);
+			int gj=getGcolor(getColor2);
+			int bj=getBcolor(getColor2);
+			int aj=getAcolor(getColor2);
+
+			if (!screen)
+			{
+				rj=BlendColor(rn,rj);
+				gj=BlendColor(gn,gj);
+				bj=BlendColor(bn,bj);
+				aj=BlendColor(an,aj);
+			}
+			else 
+			{
+				rj=BlendColorScreen(rn,rj);
+				gj=BlendColorScreen(gn,gj);
+				bj=BlendColorScreen(bn,bj);
+				aj=BlendColorScreen(an,aj);
+			}
+
+
+			sprite_pixels[y][x]=SetColorRGBA(rj,gj,bj,aj);
+			
+		}
+	}
+  }
+  engine->ReleaseBitmapSurface(src);
+
+
+}
+
+
+
+//WARP CODE
+
+float ix, iy, ua;
+
+int IntersectLines(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
+{
+  // check a
+  if (x1 == x2 && y1 == y2) return -1;
+  // check b
+  if (x3 == x4 && y3 == y4) return -1;  
+  float den = (y4-y3)*(x2-x1)-(x4-x3)*(y2-y1);   
+  float num12 = (x4-x3)*(y1-y3)-(y4-y3)*(x1-x3);
+  float num34 = (x2-x1)*(y1-y3)-(y2-y1)*(x1-x3);
+  
+  if (den == 0.0) {  // no intersection
+    if (num12 == 0.0 && num34 == 0.0) return 2;  
+    return 0; 
+  }  
+  ua = num12/den;  
+  ix = x1 + ua*(x2-x1);
+  iy = y1 + ua*(y2-y1);  
+  return 1;  
+}
+
+float min4(float m1, float m2, float m3, float m4) {
+  return min(min(m1, m2), min(m3, m4));
+}
+float max4(float m1, float m2, float m3, float m4) {
+  return max(max(m1, m2), max(m3, m4));
+}
+
+int ReturnWidth(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+{
+  float ax = float(x1), ay = float(y1);
+  float bx = float(x2), by = float(y2);
+  float cx = float(x3), cy = float(y3);
+  float dx = float(x4), dy = float(y4);
+  
+  return (int(max4(ax, bx, cx, dx))+1);
+}
+
+int ReturnHeight(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+{
+  float ax = float(x1), ay = float(y1);
+  float bx = float(x2), by = float(y2);
+  float cx = float(x3), cy = float(y3);
+  float dx = float(x4), dy = float(y4);
+  
+  return (int(max4(ay, by, cy, dy))+1);
+}
+
+int newheight;
+int newwidth;
+
+int ReturnNewHeight()
+{
+	return newheight;
+}
+
+int ReturnNewWidth()
+{
+	return newwidth;
+}
+
+int y2;
+int x3;
+int y3;
+int x4;
+int y4;
+
+void SetWarper(int y2x,int x3x,int y3x,int x4x,int y4x)
+{
+	y2=y2x;
+	x3=x3x;
+	y3=y3x;
+	x4=x4x;
+	y4=y4x;
+}
+
+void Warper(int swarp,int sadjust,int x1, int y1, int x2) 
+{
+  ix=0.0;
+  iy=0.0;
+  ua=0.0;
+  // some precautions against non-positive values for width and height
+  
+  float ax = float(x1), ay = float(y1);
+  float bx = float(x2), by = float(y2);
+  float cx = float(x3), cy = float(y3);
+  float dx = float(x4), dy = float(y4);
+  
+  int w = int(max4(ax, bx, cx, dx))+1;
+  int h = int(max4(ay, by, cy, dy))+1;
+
+  BITMAP*refsrc = engine->GetSpriteGraphic(swarp);
+  int refsrc_width=640;
+  int refsrc_height=360;
+  int refsrc_depth=32;
+  engine->GetBitmapDimensions(refsrc,&refsrc_width,&refsrc_height,&refsrc_depth);
+  unsigned int** refsprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(refsrc);
+  engine->ReleaseBitmapSurface(refsrc);
+
+  
+  // create temporary sprite holding the warped version
+  BITMAP*resizeb=engine->GetSpriteGraphic(sadjust);
+  int src_width=640;
+  int src_height=360;
+  int src_depth=32;
+  engine->GetBitmapDimensions(resizeb,&src_width,&src_height,&src_depth);
+  unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(resizeb);
+  
+ 
+  int ow = refsrc_width, oh = refsrc_height;
+    
+  int x, y;  // pixel coords
+  float fx, fy; // original sprite's in between pixel coords
+
+  int il;
+  
+  // calculate intersections of opposing sides
+  float orx_x, orx_y, ory_x, ory_y;  
+  bool xp, yp; // parallel sides?
+  
+  // AC and BD to get intersection of all "vertical lines"
+  
+  il = IntersectLines(ax, ay, cx, cy, bx, by, dx, dy);
+  if (il == 0) {
+    // parallel sides, store directional vector
+    orx_x = cx-ax;
+    orx_y = cy-ay;
+    xp = true;
+  }
+  else {
+    // store intersection of sides
+    orx_x = ix;
+    orx_y = iy;
+  }
+  // AB and CD to get intersection of all "horizontal lines"
+  il = IntersectLines(ax, ay, bx, by, cx, cy, dx, dy);
+  if (il == 0) {
+    // parallel sides, store directional vector
+    ory_x = bx-ax;
+    ory_y = by-ay;
+    yp = true;
+  }
+  else {
+    // store intersection of sides
+    ory_x = ix;
+    ory_y = iy;
+  }
+  
+  int xm = int(min4(ax, bx, cx, dx)); // x loop starts here
+  
+  y = int(min4(ay, by, cy, dy));
+  while (y < h) {
+    x = xm;
+    while (x < w) {
+      
+      // calculate original pixel
+      
+      // x:
+      if (xp) il = IntersectLines(ax, ay, bx, by, float(x), float(y), float(x)+orx_x, float(y)+orx_y);
+      else il = IntersectLines(ax, ay, bx, by, float(x), float(y), orx_x, orx_y);
+      fx = float(ow-1)*ua;
+      
+      float ux = ua;
+      
+      // y:
+      if (yp) il = IntersectLines(ax, ay, cx, cy, float(x), float(y), float(x)+ory_x, float(y)+ory_y);
+      else il = IntersectLines(ax, ay, cx, cy, float(x), float(y), ory_x, ory_y);
+      fy = float(oh-1)*ua;
+      
+      // only draw if within original sprite
+      if (ux >= 0.0 && ux <= 1.0 && ua >= 0.0 && ua <= 1.0)
+	  {
+	    int refY=int(clamp(fy,0.0,float(refsrc_height-1)));
+		int refX=int(clamp(fx,0.0,float(refsrc_width-1)));
+
+        int setcolor=refsprite_pixels[refY][refX];
+
+		int setY=int(clamp(float(y),0.0,float(src_height-1)));
+		int setX=int(clamp(float(x),0.0,float(src_width-1)));
+
+		sprite_pixels[setY][setX]=setcolor;
+
+
+        //dr.DrawingColor = do.GetPixel(int(fx), int(fy));
+        //dr.DrawPixel(x, y);
+	    //DRAW ON THE NEWLY CREATED DYNAMIC SPRITE
+      }
+
+      x++;
+    }
+    
+    y++;
+  }
+  
+  
+  
+  newwidth=w;
+  newheight=h;
+  // debugging: draw edges
+  
+  /*
+  do.DrawingColor = Game.GetColorFromRGB(255, 0, 0);
+  do.DrawLine(x1, y1, x2, y2);
+  do.DrawLine(x2, y2, x4, y4);
+  do.DrawLine(x4, y4, x3, y3);
+  do.DrawLine(x3, y3, x1, y1);
+  */
+  engine->ReleaseBitmapSurface(resizeb);
+  //this.ChangeCanvasSize(w, h, 0, 0);
+  
+
+  //RETURN HEIGHT AND WIDTH
+  //RETURN DYNAMIC SPRITE GRAPH?
+  
+}
+
+//WARP CODE
+
+
+
+
+
+
+
+
+
+
+
 
 
 void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
@@ -2509,6 +2821,96 @@ float fbm (float stx,float sty)
 }
 
 
+
+float Hash (float stx, float sty, float s)
+{
+	float dot=dotProduct(stx*abs(sin(s)),sty*abs(sin(s)), 27.1,61.7);
+	dot = sin(dot)*273758.5453123;
+	dot = fracts(dot);
+	return dot;
+}
+float noiseN(float px,float py, float s)
+{
+    float ix=floor(px);
+    float iy=floor(py);
+    float fx=fracts(px);
+    float fy=fracts(py);
+	
+    fx *= fx * (3.0-2.0*fx);
+    fy *= fy * (3.0-2.0*fy);
+    float mixA=lerp(Hash(ix,iy, s), Hash(ix+1.0,iy +0.0, s),fx);
+    float mixB=lerp(Hash(ix,iy+1.0, s), Hash(ix+1.0,iy+1.0, s),fx);
+    float mixC = lerp(mixA,mixB,fy)*s;
+	
+    return mixC;
+}
+float fbmN(float px,float py)
+{
+     float v = 0.0;
+     v += noiseN(px*1.0,py*1.0, 0.35);
+     v += noiseN(px*2.0,py*2.0, 0.25);
+     v += noiseN(px*4.0,py*4.0, 0.125);
+     v += noiseN(px*8.0,py*8.0, 0.0625);
+     return v;
+}
+float n_time[20];//=1.0;
+void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id)
+{
+	if (n_time[id]<1.0) n_time[id]=1.0;
+	n_time[id]+=ady;
+	BITMAP* src = engine->GetSpriteGraphic(spriteD);
+	
+	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
+	
+	int src_width=640;
+	int src_height=360;
+	int src_depth=32;
+
+	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+	
+
+    int x,y;
+	for (y = 0; y < src_height; y++)
+	{
+		for (x = 0; x < src_width; x++)
+		{
+			int setY=y;
+			if (setY<0) setY=0;
+			//if (setY>src_height-1) setY=src_height-1;
+			int setX=x;
+			if (setX<0) setX=0;
+			//if (setX>src_width-1) setX=src_width-1;
+			
+			float uvx=(float(x)/float(scalex))*2.0 - 1.0;
+			float uvy=(float((src_height/-2)+y)/float(scaley))*2.0 - 1.0;
+			uvx *= float(scalex)/float(scaley);
+
+			float uvc = uvy;
+			if (vertical) uvc=uvx;
+
+			float t = abs(1.0 / ((uvc + fbmN( uvx + n_time[id],uvy+n_time[id])) * (speed)));
+			float fr=0.0;
+			float fg=0.0;
+			float fb=0.0;
+			fr += t * (0.839);
+			fr += t * (0.49);	
+			fg += t * (0.784);	
+			fb += t * (2.82);
+			//gl_FragColor = vec4( vec3(fr,fg,fb), 1.0 );
+			int Rd=int(fr*255.0);
+			int Gd=int(fg*255.0);
+			int Bd=int(fb*255.0);
+			int na=int((t*1.0)*255.0);
+			
+			pixelb[setY][setX]= SetColorRGBA(Rd,Gd,Bd,na);
+			
+		}
+	}
+    
+
+	engine->ReleaseBitmapSurface(src);
+
+}
 
 
 
@@ -3771,6 +4173,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("DrawBlur",(void*)&DrawBlur);
   engine->RegisterScriptFunction("SetColorShade",(void*)&SetColorShade);
   engine->RegisterScriptFunction("DrawCloud",(void*)&DrawCloud);
+  engine->RegisterScriptFunction("DrawLightning",(void*)&DrawLightning);
   engine->RegisterScriptFunction("Grayscale",(void*)&Grayscale);
   engine->RegisterScriptFunction("ReadWalkBehindIntoSprite",(void*)&ReadWalkBehindIntoSprite);
   engine->RegisterScriptFunction("AdjustSpriteFont",(void*)&AdjustSpriteFont);
@@ -3786,8 +4189,15 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("FireUpdate",(void*)&FireUpdate);
   engine->RegisterScriptFunction("WindUpdate",(void*)&WindUpdate);
   engine->RegisterScriptFunction("SetWindValues",(void*)&SetWindValues);
+  engine->RegisterScriptFunction("ReturnWidth",(void*)&ReturnWidth);
+  engine->RegisterScriptFunction("ReturnHeight",(void*)&ReturnHeight);
+  engine->RegisterScriptFunction("ReturnNewHeight",(void*)&ReturnNewHeight);
+  engine->RegisterScriptFunction("ReturnNewWidth",(void*)&ReturnNewWidth);
+  engine->RegisterScriptFunction("Warper",(void*)&Warper);
+  engine->RegisterScriptFunction("SetWarper",(void*)&SetWarper);
   engine->RegisterScriptFunction("RainUpdate",(void*)&RainUpdate);
   engine->RegisterScriptFunction("BlendTwoSprites",(void*)&BlendTwoSprites);
+  engine->RegisterScriptFunction("Blend",(void*)&Blend);
   engine->RegisterScriptFunction("TintProper",(void*)&TintProper);
   engine->RegisterScriptFunction("CalculateThings",(void*)&CalculateThings);
   engine->RegisterScriptFunction("Objindex",(void*)&Objindex);
@@ -3796,6 +4206,9 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("Baseindex",(void*)&Baseindex);
   engine->RegisterScriptFunction("GetWalkbehindBaserine",(void*)&GetWalkbehindBaserine);
   engine->RegisterScriptFunction("SetWalkbehindBaserine",(void*)&SetWalkbehindBaserine);
+  
+
+
 
 
 
@@ -4043,6 +4456,7 @@ const char* scriptHeader =
   "import void Audio_Pause();\r\n"
   "import void Audio_Resume();\r\n"
   "import void DrawBlur(int spriteD,int radius);\r\n"
+  "import void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id);\r\n"
   "import void DrawCloud(int spriteD, int scale, float speed);\r\n"
   "import void SetColorShade(int Rn,int Gn,int Bn, int idn);\r\n"
   "import void Grayscale(int sprite);\r\n"
@@ -4061,7 +4475,14 @@ const char* scriptHeader =
   "import void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite);\r\n"
   "import void SetWindValues(int w,int h,int pr,int prev);\r\n"
   "import void RainUpdate(int rdensity, int FX, int FY,int RW,int RH,int graphic);\r\n"
+  "import int ReturnWidth(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);\r\n"
+  "import int ReturnHeight(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);\r\n"
+  "import int ReturnNewHeight();\r\n"
+  "import int ReturnNewWidth();\r\n"
+  "import void SetWarper(int y2x,int x3x,int y3x,int x4x,int y4x);\r\n"
+  "import void Warper(int swarp,int sadjust,int x1, int y1, int x2);\r\n"
   "import void BlendTwoSprites(int graphic, int refgraphic);\r\n"
+  "import void Blend(int graphic, int refgraphic, bool screen);\r\n"
   "import void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int blx);\r\n"
   "import int CalculateThings(bool clap,int ids);\r\n"
   "import int Objindex(int i);\r\n"
@@ -4070,6 +4491,10 @@ const char* scriptHeader =
   "import int Baseindex(int i);\r\n"
   "import int GetWalkbehindBaserine(int id);\r\n"
   "import void SetWalkbehindBaserine(int id,int base);\r\n"
+  
+
+
+
     
   //"import void Circle(int lightex,int lightey,int spriteX,int sredec,float degstep,float radius);\r\n"
   ;
