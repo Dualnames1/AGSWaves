@@ -16,7 +16,7 @@ SDL_INCLUDE = -F/Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers
 
 CFLAGS = -fPIC -fvisibility=hidden -O2 -g -Wall $(SDL_INCLUDE)
 LDFLAGS = $(SDL_LIB)
-TARGET = libagswave.dylib
+TARGET = libagswaves.dylib
 CFLAGS += -DMAC_VERSION
 else
 
@@ -25,7 +25,7 @@ SDL_INCLUDE = `sdl2-config --cflags`
 
 CFLAGS = -fPIC -fvisibility=hidden -O2 -g -Wall $(SDL_INCLUDE)
 LDFLAGS = $(SDL_LIB)
-TARGET = libagswave.so
+TARGET = libagswaves.so
 CFLAGS += -DLINUX_VERSION
 endif
 
