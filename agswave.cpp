@@ -427,7 +427,7 @@ void OGGplayMusic(const char*filename, int volume, int repeat)
 
 
 
-const char * GetPath(std::string Folder,std::string Extension, int file)
+void GetPath(const char* destinationPath, std::string Folder,std::string Extension, int file)
 {
 	char fullPath[1000];
 	std::string MusicName=Folder;
@@ -442,17 +442,21 @@ const char * GetPath(std::string Folder,std::string Extension, int file)
 	char MFXN[1024];
 	std::strcpy(MFXN, MusicName.c_str());
 	engine->GetPathToFileInCompiledFolder(MFXN, fullPath);
-	return fullPath;
+  //char* anarray = (char*) malloc(1024 * sizeof(char));
+	std::strcpy((char*)destinationPath, fullPath);
+	return;
 }
 
-const char* GetMusicPath(int j)
+void GetMusicPath(const char* destinationPath, int j)
 {
-	return GetPath("Music\\music",".mfx",j);
+	 GetPath(destinationPath, "Music/music",".mfx",j);
+	 return;
 }
 
-const char* GetSoundPath(int j)
+void GetSoundPath(const char* destinationPath, int j)
 {
-	return GetPath("Sounds\\sound",".sfx",j);
+	GetPath(destinationPath, "Sounds/sound",".sfx",j);
+	return;
 }
 
 void ApplyFilter(int SetFrequency)
@@ -480,7 +484,9 @@ void UnloadSFX(int i)
 
 void LoadSFX(int i)
 {
-	SFX[i].chunk = Mix_LoadWAV(GetSoundPath(i));
+	char musicPath[1024];
+	GetSoundPath(musicPath,i);
+	SFX[i].chunk = Mix_LoadWAV(musicPath);
 }
 
 void SetAudioDriver(const char*name)
@@ -551,7 +557,9 @@ void SDLMain()
 		   int j=0;
 		   while (j < 40)//40)
 		   {
-			   musiceffect[j]=Mix_LoadMUS(GetMusicPath(j));
+			 	 char musicPath[1024];
+				 GetMusicPath(musicPath,j);
+			   musiceffect[j]=Mix_LoadMUS(musicPath);
 			   j++;
 		   }
 		   int i=0;
@@ -767,7 +775,9 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 			OGGinitAudio();
 			GeneralAudio.Initialized=true;
 		}
-		OGGplayMusic(GetMusicPath(MusicToPlay), 0,repeat);
+		char musicPath[1024];
+		GetMusicPath(musicPath,MusicToPlay);
+		OGGplayMusic(musicPath, 0,repeat);
 		MFXStream.ID=MusicToPlay;
 		MFXStream.FadeIn=true;
 		MFXStream.FadeTime=(fadeinMS/1000)*40;
