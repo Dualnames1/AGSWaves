@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  */
-#if !defined(LINUX_VERSION) || !defined(MAC_VERSION)
+#if !defined(LINUX_VERSION) && !defined(MAC_VERSION)
 #include "stdint.h"
 #endif
 
@@ -84,7 +84,7 @@ static uint32_t gSoundCount;
  * @param new       New Audio to add
  *
  */
-#if !defined(LINUX_VERSION) || !defined(MAC_VERSION)
+#if !defined(LINUX_VERSION) && !defined(MAC_VERSION)
 static void addMusic(Audio * root, Audio * new);
 #else
 void addMusic(Audio * root, Audio * new);
