@@ -449,13 +449,21 @@ void GetPath(const char* destinationPath, std::string Folder,std::string Extensi
 
 void GetMusicPath(const char* destinationPath, int j)
 {
-	 GetPath(destinationPath, "Music/music",".mfx",j);
+#ifdef WIN32
+	 GetPath(destinationPath, "Music\\music",".mfx",j);
+#else
+ 	 GetPath(destinationPath, "Music/music",".mfx",j);
+#endif
 	 return;
 }
 
 void GetSoundPath(const char* destinationPath, int j)
 {
+#ifdef WIN32
+	GetPath(destinationPath, "Sounds\\sound",".sfx",j);
+#else
 	GetPath(destinationPath, "Sounds/sound",".sfx",j);
+#endif
 	return;
 }
 
