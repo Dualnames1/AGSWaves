@@ -1,1 +1,1 @@
-OBJS = strangeland.o
+OBJS = agswave.o audio.o
