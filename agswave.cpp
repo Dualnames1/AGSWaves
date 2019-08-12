@@ -11,13 +11,14 @@
 #define THIS_IS_THE_PLUGIN
 #endif
 
+#include <algorithm>
 #include <stdlib.h>
 #include <stdio.h>
 #include <SDL.h>
 #include <iostream>
 #include <SDL_mixer.h>
 #include <sstream>
-#include <string>
+#include <cstring>
 #include <math.h>
 #include "audio.h"
 
@@ -165,11 +166,11 @@ Particle particles2[12];
 int WForceX[400];
 int WForceY[400];
 
-int raysizeF=4; 
+int raysizeF=4;
 int dsizeF=0;
-int raysize=100; 
+int raysize=100;
 int dsize=0;
-int raysize2=12; 
+int raysize2=12;
 int dsize2=0;
 int creationdelayf=0;
 int ww;
@@ -185,7 +186,7 @@ struct RainParticle
   int fx;
   int fy;
   int life;
-  int trans;  
+  int trans;
   bool active;
   int translay;
   int transhold;
@@ -245,25 +246,25 @@ void LPEffect(int chan, void *stream, int len, void *udata)
 {
 	int CUTOFF=GeneralAudio.FilterFrequency;
 	float SAMPLE_RATE=48000.0;
-	
+
 
 	short* samples = (short*)stream;
 	short* samplesINPUT = (short*)stream;
-	
-	
-	double RC = 1.0/(CUTOFF*16*3.14); 
-    double dt = 1.0/(SAMPLE_RATE); 
+
+
+	double RC = 1.0/(CUTOFF*16*3.14);
+    double dt = 1.0/(SAMPLE_RATE);
     double alpha = dt/(RC+dt);
 
-	
-  
+
+
 
     double ax[3];
 	double by[3];
 	getLPCoe(SAMPLE_RATE, CUTOFF*12, ax, by);
 
 	for(int i = 0; i < (len/2); i++)//len/2
-    { 
+    {
 	   xv[2] = xv[1];
 	   xv[1] = xv[0];
        xv[0] = samples[i];
@@ -274,14 +275,14 @@ void LPEffect(int chan, void *stream, int len, void *udata)
                     - by[1] * yv[0]
                     - by[2] * yv[1]);
 
-       samples[i] = yv[0];        
+       samples[i] = yv[0];
     }
 }
 
 
 bool OGG_Filter=false;
 
-#include <stb_vorbis.c>
+#include "stb_vorbis.c"
 #define SDL_AUDIO_ALLOW_CHANGES SDL_AUDIO_ALLOW_ANY_CHANGE
 struct MusicStream
 {
@@ -303,7 +304,7 @@ void OGGAudioCallback(void* userData, Uint8* stream, int len)
 		//SDL_memclear
 		return;
 	}
-    
+
     SDL_memset(stream, 0, len);
 
 	short* samples = (short*)stream;
@@ -311,10 +312,10 @@ void OGGAudioCallback(void* userData, Uint8* stream, int len)
 	//ADD REPEAT
 
     int pf=stb_vorbis_get_samples_short_interleaved(globalStream.Vorbis, 2, samples, len/sizeof(short));
-	
+
 	for(int i = 0; i < (len/2); i++)
-    { 
-       samples[i] = (samplesINPUT[i]*audioGetGlobalVolume())/100;	  
+    {
+       samples[i] = (samplesINPUT[i]*audioGetGlobalVolume())/100;
 	   if (pf<4096 && globalStream.repeat==1)
 	   {
 		   stb_vorbis_seek(globalStream.Vorbis,4096);
@@ -323,32 +324,32 @@ void OGGAudioCallback(void* userData, Uint8* stream, int len)
 		   continue;
 	   }
     }
-	
+
 
 
 	if (OGG_Filter)
 	{
 	int CUTOFF=GeneralAudio.FilterFrequency;
 	float SAMPLE_RATE=48000.0;
-	
+
 
 	//short* samples = (short*)stream;
 	samplesINPUT = samples;
-	
-	
-	double RC = 1.0/(CUTOFF*16*3.14); 
-    double dt = 1.0/(SAMPLE_RATE); 
+
+
+	double RC = 1.0/(CUTOFF*16*3.14);
+    double dt = 1.0/(SAMPLE_RATE);
     double alpha = dt/(RC+dt);
 
-	
-  
+
+
 
     double ax[3];
 	double by[3];
 	getLPCoe(SAMPLE_RATE, CUTOFF*12, ax, by);
 
 	for(int i = 0; i < (len/2); i++)//len/2
-    { 
+    {
 	   xvOGG[2] = xvOGG[1];
 	   xvOGG[1] = xvOGG[0];
        xvOGG[0] = samples[i];
@@ -359,7 +360,7 @@ void OGGAudioCallback(void* userData, Uint8* stream, int len)
                     - by[1] * yvOGG[0]
                     - by[2] * yvOGG[1]);
 
-       samples[i] = yvOGG[0];        
+       samples[i] = yvOGG[0];
     }
 	}
 
@@ -368,7 +369,7 @@ void OGGAudioCallback(void* userData, Uint8* stream, int len)
 }
 
 void OGGinitAudio()
-{	
+{
     spec.freq = 48000;
     spec.format = MIX_DEFAULT_FORMAT;
     spec.channels = 2;
@@ -385,7 +386,7 @@ void OGGinitAudio()
 		else SDL_PauseAudioDevice(getDevice, 1);
 	}
 
-	
+
 }
 
 void OGGendAudio()
@@ -426,7 +427,7 @@ void OGGplayMusic(const char*filename, int volume, int repeat)
 
 
 
-const char * GetPath(std::string Folder,std::string Extension, int file)
+void GetPath(const char* destinationPath, std::string Folder,std::string Extension, int file)
 {
 	char fullPath[1000];
 	std::string MusicName=Folder;
@@ -440,18 +441,30 @@ const char * GetPath(std::string Folder,std::string Extension, int file)
 	MusicName=MusicName.append(Extension);
 	char MFXN[1024];
 	std::strcpy(MFXN, MusicName.c_str());
-	engine->GetPathToFileInCompiledFolder(MFXN, fullPath);	
-	return fullPath;
+	engine->GetPathToFileInCompiledFolder(MFXN, fullPath);
+  //char* anarray = (char*) malloc(1024 * sizeof(char));
+	std::strcpy((char*)destinationPath, fullPath);
+	return;
 }
 
-const char* GetMusicPath(int j)
-{	
-	return GetPath("Music\\music",".mfx",j);
-}
-
-const char* GetSoundPath(int j)
+void GetMusicPath(const char* destinationPath, int j)
 {
-	return GetPath("Sounds\\sound",".sfx",j);
+#ifdef WIN32
+	 GetPath(destinationPath, "Music\\music",".mfx",j);
+#else
+ 	 GetPath(destinationPath, "Music/music",".mfx",j);
+#endif
+	 return;
+}
+
+void GetSoundPath(const char* destinationPath, int j)
+{
+#ifdef WIN32
+	GetPath(destinationPath, "Sounds\\sound",".sfx",j);
+#else
+	GetPath(destinationPath, "Sounds/sound",".sfx",j);
+#endif
+	return;
 }
 
 void ApplyFilter(int SetFrequency)
@@ -461,7 +474,7 @@ void ApplyFilter(int SetFrequency)
 	SetFilterFrequency(SetFrequency);
 	//Mix_HookMusic(OGGAudioCallback,NULL);
 	Mix_RegisterEffect(MIX_CHANNEL_POST, LPEffect, NULL, NULL);//MIX_CHANNEL_POST
-	
+
 }
 
 void RemoveFilter()
@@ -478,8 +491,10 @@ void UnloadSFX(int i)
 }
 
 void LoadSFX(int i)
-{	
-	SFX[i].chunk = Mix_LoadWAV(GetSoundPath(i));
+{
+	char musicPath[1024];
+	GetSoundPath(musicPath,i);
+	SFX[i].chunk = Mix_LoadWAV(musicPath);
 }
 
 void SetAudioDriver(const char*name)
@@ -490,34 +505,34 @@ void SetAudioDriver(const char*name)
 void SDLMain()
 {
 	//engine->DisableSound();
-	
+
     //SDL_Init(SDL_INIT_AUDIO);
     //OPEN DEVICE
 	//PICK SDL_AUDIODRIVER FROM WINSETUP READ
 	//int numAudioDrivers = SDL_GetNumAudioDrivers();
-	
-	//for(int i=0;i<numAudioDrivers;i++) 
+
+	//for(int i=0;i<numAudioDrivers;i++)
 	//{
 		//engine->AbortGame(SDL_GetAudioDriver(i));
-	
+
 	#ifdef WIN32
 	    if (SDL_AudioInit("xaudio")==0)
 		{
 			SetAudioDriver("xaudio");
 		}
-		else if (SDL_AudioInit("directsound")==0)	//DIRECTSOUND 1	
+		else if (SDL_AudioInit("directsound")==0)	//DIRECTSOUND 1
 		{
 			SetAudioDriver("directsound");
 		}
-		else if (SDL_AudioInit("winmm")==0)	//WINMM 2	
+		else if (SDL_AudioInit("winmm")==0)	//WINMM 2
 		{
 			SetAudioDriver("winmm");
-		}		
-		else if (SDL_AudioInit("wasapi")==0)	//WASAPI 0	
+		}
+		else if (SDL_AudioInit("wasapi")==0)	//WASAPI 0
 		{
 			SetAudioDriver("wasapi");
 		}
-		else if (SDL_AudioInit("disk")==0)	//DISK 3	
+		else if (SDL_AudioInit("disk")==0)	//DISK 3
 		{
 			SetAudioDriver("disk");
 		}
@@ -525,17 +540,17 @@ void SDLMain()
 		{
 			SetAudioDriver("dummy");
 		}
-		else 
+		else
 		{
 			GeneralAudio.Disabled=true;
 		}
 	#endif
 
-		
-		
+
+
        if (!GeneralAudio.Disabled)
 	   {
-		   SDL_Init(SDL_INIT_AUDIO);  
+		   SDL_Init(SDL_INIT_AUDIO);
 		   SDL_AudioInit(SDL_GetCurrentAudioDriver());
 		   if (Mix_OpenAudio(48000,MIX_DEFAULT_FORMAT,2,4096) <0)
 		   {
@@ -544,13 +559,15 @@ void SDLMain()
 			   return;
 			   //RETURN ERROR
 		   }
-		   
+
 		   GeneralAudio.NumOfChannels=60;
 		   Mix_AllocateChannels(GeneralAudio.NumOfChannels);
 		   int j=0;
 		   while (j < 40)//40)
 		   {
-			   musiceffect[j]=Mix_LoadMUS(GetMusicPath(j));
+			 	 char musicPath[1024];
+				 GetMusicPath(musicPath,j);
+			   musiceffect[j]=Mix_LoadMUS(musicPath);
 			   j++;
 		   }
 		   int i=0;
@@ -565,7 +582,7 @@ void SDLMain()
 		   }
 	   }
 	   //SDL_setenv("SDL_DISKAUDIODELAY", "0" , 1);
-	
+
 }
 
 
@@ -605,12 +622,12 @@ void PlaySFX(int SoundToPlay, int repeat)
 	}
 
 	if (SFX[SoundToPlay].chunk!=NULL)
-	{		
+	{
 		int i=0;
 		int id=-1;
 		while (i < GeneralAudio.NumOfChannels)
 		{
-			if (Mix_Playing(i)!=0 &&Mix_GetChunk(i)!=NULL && Mix_GetChunk(i)==SFX[SoundToPlay].chunk)// 
+			if (Mix_Playing(i)!=0 &&Mix_GetChunk(i)!=NULL && Mix_GetChunk(i)==SFX[SoundToPlay].chunk)//
 			{
 				id=i;
 			}
@@ -624,9 +641,9 @@ void PlaySFX(int SoundToPlay, int repeat)
 
 		if (id==-1)
 		{
-			
+
 		SFX[SoundToPlay].volume=SFXGetVolume(SoundToPlay);
-		
+
 		Mix_VolumeChunk(SFX[SoundToPlay].chunk,SFX[SoundToPlay].volume);
 		int grabChan=Mix_PlayChannel(-1,SFX[SoundToPlay].chunk,0);	//-1
 		Mix_Volume(grabChan,GeneralAudio.SoundValue);
@@ -649,7 +666,7 @@ void SFXSetPosition(int SoundToSet,int xS,int yS,int intensity)
 {
   if (SFX[SoundToSet].chunk!=NULL)
   {
-  
+
   int i=0;
   int id=-1;
   while (i < GeneralAudio.NumOfChannels)
@@ -666,33 +683,33 @@ void SFXSetPosition(int SoundToSet,int xS,int yS,int intensity)
       int angle=0;
 	  int dist=0;
 
-      
+
 	  if (xS!=0 && yS!=0)
 	  {
 	  int pid=engine->GetPlayerCharacter();
 	  playerCharacter = engine->GetCharacter(pid);
-      
+
       int x1=Character_GetX(playerCharacter);
 	  int y1=Character_GetY(playerCharacter);
-	  
+
 	  int x2=xS;
 	  int y2=yS;
-	  
+
 	  int defx = (x1-x2)*(x1-x2);
 	  int defy = (y1-y2)*(y1-y2);
-	  
+
 	  float SquareRoot=sqrt (float(defx + defy));
 	  dist=int(SquareRoot)-intensity;
 	  if (dist >255) dist=255;
 	  if (dist <0)  dist=0;
-	  
+
 	  float xDiff = float(x2 - x1);
 	  float yDiff = float(y2 - y1);
 	  float at2= atan2(yDiff,xDiff);
-	  //float angles= (at2 * 180.0 / PI);	  
+	  //float angles= (at2 * 180.0 / PI);
       //angle=int(angles)%360;
 
-	  float angles= (at2 * 360.0 / PI);	  
+	  float angles= (at2 * 360.0 / PI);
       angle=int(angles);//%360;
 
 
@@ -711,7 +728,7 @@ void SFXStop(int SoundToStop,int fadems)
 {
 	if (SFX[SoundToStop].chunk!=NULL)
 	{
-		
+
 		int i=0;
 		while (i < GeneralAudio.NumOfChannels)
 		{
@@ -745,10 +762,10 @@ int MusicGetVolume()
 void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,bool forceplay)
 {
 	if (GeneralAudio.Disabled)
-	{		
+	{
 		return;
 	}
-	
+
     bool samefile=currentMusic!=MusicToPlay;
     if (forceplay) samefile=true;
 
@@ -766,7 +783,9 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 			OGGinitAudio();
 			GeneralAudio.Initialized=true;
 		}
-		OGGplayMusic(GetMusicPath(MusicToPlay), 0,repeat);
+		char musicPath[1024];
+		GetMusicPath(musicPath,MusicToPlay);
+		OGGplayMusic(musicPath, 0,repeat);
 		MFXStream.ID=MusicToPlay;
 		MFXStream.FadeIn=true;
 		MFXStream.FadeTime=(fadeinMS/1000)*40;
@@ -776,13 +795,13 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 		MFXStream.HasBeenStopped=false;
 		MusicVolCanBeAdjusted=true;
 	}
-	else 
+	else
 	{
 		MFXStream.FadeIn=false;
-		Mix_FadeInMusic(musiceffect[MusicToPlay],repeat, fadeinMS);		
+		Mix_FadeInMusic(musiceffect[MusicToPlay],repeat, fadeinMS);
 		//playMusic(PlayMStream(MusicID), 0);//FADEOUT
 		MFXStream.ID=MusicToPlay;
-		
+
 		MFXStream.FadeOut=true;
 		MFXStream.FadeTime=(fadeoutMS/1000)*40;
 		MFXStream.FadeVolume=float(MusicGetVolume());
@@ -791,11 +810,11 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 		MusicVolCanBeAdjusted=false;
 	}
 	}
-	
+
 }
 
 void MusicStop(int fadeoutMS)
-{	
+{
 	Mix_FadeOutMusic(fadeoutMS);
 
 	if (fadeoutMS > 0 )
@@ -808,7 +827,7 @@ void MusicStop(int fadeoutMS)
 		MusicVolCanBeAdjusted=false;
 		MFXStream.IsStopped=true;
 	}
-	else 
+	else
 	{
 		MFXStream.IsStopped=false;
 		MFXStream.FadeOut=false;
@@ -884,7 +903,7 @@ void Update()
 			MFXStream.FadeVolume=float(MusicGetVolume());
 		}
 		audioSetGlobalVolume(MFXStream.FadeVolume);
-		
+
 		if (MFXStream.FadeTime<=0)
 		{
 			MFXStream.FadeIn=false;
@@ -913,7 +932,7 @@ void Update()
 	int j=0;
 	while (j < 300-1)
 	{
-		
+
 		int i=0;
 		int id=-1;
 		while (i < GeneralAudio.NumOfChannels)
@@ -935,7 +954,7 @@ void Update()
 			//	SFX[j].position+=1;
 			//}
 		}
-		else 
+		else
 		{
 			//sound is not playing
 			//IF REPEAT PLAY SOUND
@@ -957,7 +976,7 @@ void Update()
 	j++;
 	}
 
-    
+
 
 }
 
@@ -973,14 +992,14 @@ int direction[30];
 
 void CastWave(int delayMax, int PixelsWide,int n)
 {
-  
+
   tDy[n]++;
   if (tDy[n] >delayMax)
   {
     tDy[n]=0;
     if (direction[n]==0) dY[n]++;
 	if (direction[n]==1) dY[n]--;
-	if ( (dY[n]>PixelsWide && direction[n]==0) || (dY[n]<(-PixelsWide) && direction[n]==1) ) 
+	if ( (dY[n]>PixelsWide && direction[n]==0) || (dY[n]<(-PixelsWide) && direction[n]==1) )
 	{
 		if (direction[n]==0){dY[n]=PixelsWide;direction[n]=1;}
 		else {dY[n]=-PixelsWide;direction[n]=0;}
@@ -1058,7 +1077,7 @@ void CreateParticle(int xx, int yy, int ForceX, int ForceY)
     }
     h++;
   }
-  
+
   if (foundparticle)
   {
     int d=fid;
@@ -1104,7 +1123,7 @@ void CreateParticle2(int xx, int yy, int ForceX, int ForceY)
     }
     h++;
   }
-  
+
   if (foundparticle)
   {
     int d=fid;
@@ -1150,7 +1169,7 @@ void CreateParticleF(int xx, int yy, int ForceX, int ForceY)
     }
     h++;
   }
-  
+
   if (foundparticle)
   {
     int d=fid;
@@ -1202,7 +1221,7 @@ int SetColorRGBA(int r,int g,int b,int a)
 
 void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 {
-  BITMAP* src = engine->GetSpriteGraphic(sprite);	
+  BITMAP* src = engine->GetSpriteGraphic(sprite);
   int src_width=640;
   int src_height=360;
   int src_depth=32;
@@ -1214,7 +1233,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
     while (by <2)
     {
 		int dnx=Random(ww+250)-250;
-		int dny=Random(hh);    
+		int dny=Random(hh);
 		CreateParticle(dnx, dny, ForceX, ForceY);
 		by++;
     }
@@ -1223,24 +1242,24 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 	if (ForceX >0) dnx=(Random(ww+250)-250)-(50 + Random(100));
 	else dnx=Random(ww+250)-250;
 	//
-    int dny=Random(hh); 
+    int dny=Random(hh);
 	CreateParticle2(dnx, dny, ForceX, ForceY);
 
-    
+
     dnx=-(20+Random(50));//Random(ww);
     if (dnx<-160) dnx=-160;
     if (dnx > ww+160) dnx=ww+160;
-    
-    dny=Random(hh);    
+
+    dny=Random(hh);
     CreateParticleF(dnx, dny, ForceX, ForceY);
-    
+
   int h=dsize-1;
-  
+
   if (h < dsizeF-1)
   {
     h=dsizeF-1;
   }
-  
+
   int setByx=0;
   if (proom==3 && prevroom==14)
   {
@@ -1261,23 +1280,23 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 
       int pwidth=particles[h].width+df;
       int pheight=particles[h].height+df;
-      
+
       int px=particles[h].x-(pwidth/2);
       int py=particles[h].y-(pheight/2);
       int tp=particles[h].transp+Transparency;
-      
+
       if (tp>100) tp=100;
-      
+
       int pgraph=0;
       int SplitBetweenTwo=Random(100);
       if (SplitBetweenTwo<=50) pgraph=813;
       else pgraph=4466;
-      
+
       if (tp!=100)
 	  {
-		 
-		  BITMAP* src2 = engine->GetSpriteGraphic(pgraph+particles[h].frame);	
-		  
+
+		  BITMAP* src2 = engine->GetSpriteGraphic(pgraph+particles[h].frame);
+
 
 		  int src2_width=640;
 		  int src2_height=360;
@@ -1291,7 +1310,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 		  int starty=py;
 		  int endy=py+src2_height;
 
-		  
+
 
 		  int x,y;
 		  int ny=0;
@@ -1306,7 +1325,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 				  if (setX > src2_width-1) setX=src2_width-1;
 				  if (setY< 0) setY =0;
 				  if (setY> src2_height-1) setY=src2_height-1;
-				  
+
 				  int netX=x;
 				  int netY=y;
 
@@ -1329,7 +1348,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 			  }
 			  ny++;
 		  }
-		  
+
       }
       particles[h].timlay+=int(6.0);
       if (particles[h].timlay> particles[h].mlay)
@@ -1337,14 +1356,14 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
         particles[h].frame++;
         if (particles[h].frame>6) particles[h].frame=0;
         particles[h].timlay=0;
-        particles[h].x += particles[h].dx+particles[h].fx; 
-        particles[h].y += particles[h].dy+particles[h].fy;//Random(1);        
+        particles[h].x += particles[h].dx+particles[h].fx;
+        particles[h].y += particles[h].dy+particles[h].fy;//Random(1);
       }
       particles[h].translay+=2;
       if (particles[h].translay>=particles[h].translayHold)
       {
         if (particles[h].transp<=99) particles[h].transp++;
-        else 
+        else
         {
           particles[h].life=0;
         }
@@ -1352,12 +1371,12 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
       if (particles[h].x>=(ww-90)+setByx || particles[h].x<90+setByx)
       {
         if (particles[h].transp<=99)particles[h].transp++;
-        else 
+        else
         {
-          particles[h].life=0;       
+          particles[h].life=0;
         }
       }
-      
+
       if (!particles[h].doingcircle && particles[h].angle==0.0
       && particles[h].doingCircleChance<=0)
       {
@@ -1373,23 +1392,23 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
           int Y=particles[h].y + int((sin(particles[h].angle)* particles[h].radius));
           int X=particles[h].x + int((cos(particles[h].angle)* particles[h].radius));
           particles[h].x=X;
-          particles[h].y=Y;  
+          particles[h].y=Y;
         }
       }
       particles[h].fx=ForceX;
       particles[h].fy=ForceY;
-      
+
     }
-    else 
+    else
     {
       particles[h].active=false;
     }
 
 
 
-    
-    
-   
+
+
+
     if (h<=5 && particlesF[h].life>0)
     {
       int pwidth=particlesF[h].width;
@@ -1400,15 +1419,15 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
       int SplitBetweenTwo=Random(100);
       if (SplitBetweenTwo<=50) pgraph=806;
       else pgraph=4459;
-      
-      int tp=particlesF[h].transp+Transparency;      
+
+      int tp=particlesF[h].transp+Transparency;
       if (tp>100) tp=100;
-      
-      
-      if (tp!=100) 
+
+
+      if (tp!=100)
 	  {
-		  
-		  BITMAP* src2 = engine->GetSpriteGraphic(pgraph+particlesF[h].frame);	
+
+		  BITMAP* src2 = engine->GetSpriteGraphic(pgraph+particlesF[h].frame);
 		  int src2_width=640;
 		  int src2_height=360;
 		  int src2_depth=32;
@@ -1421,7 +1440,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 		  int starty=py;
 		  int endy=py+src2_height;
 
-		  
+
 		  int x,y;
 		  int ny=0;
 		  for (y = starty; y < endy; y++)
@@ -1435,7 +1454,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 				  if (setX > src2_width-1) setX=src2_width-1;
 				  if (setY< 0) setY =0;
 				  if (setY> src2_height-1) setY=src2_height-1;
-				  
+
 				  int netX=x;
 				  int netY=y;
 
@@ -1460,7 +1479,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 			  ny++;
 		  }
 
-		  
+
 
 
        // drawt.DrawImage(px+setByx, py, , tp, pwidth, pheight);
@@ -1472,24 +1491,24 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
         if (particlesF[h].frame>6)  particlesF[h].frame=0;
         particlesF[h].timlay=0;
         particlesF[h].x += particlesF[h].dx + ForceX;
-        particlesF[h].y += particlesF[h].dy + ForceY;     
+        particlesF[h].y += particlesF[h].dy + ForceY;
       }
-      
-      
+
+
       if (particlesF[h].x>=ww-90 || particlesF[h].x<90)
       {
-        particlesF[h].translay+=2; 
+        particlesF[h].translay+=2;
         if (particlesF[h].translay>=particlesF[h].translayHold)
-        {          
+        {
           if (particlesF[h].transp<=99) particlesF[h].transp++;
-          else 
+          else
           {
             particlesF[h].life=0;
           }
         }
-      }      
+      }
     }
-    else 
+    else
     {
       if (h<=9)  particlesF[h].active=false;
     }
@@ -1507,20 +1526,20 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 
       int pwidth=particles2[h].width+df;
       int pheight=particles2[h].height+df;
-      
+
       int px=particles2[h].x-(pwidth/2);
       int py=particles2[h].y-(pheight/2);
       int tp=particles2[h].transp+Transparency;
-      
+
       if (tp>100) tp=100;
-      
+
       int pgraph=5224;
-      
+
       if (tp!=100)
 	  {
-		 
-		  BITMAP* src2 = engine->GetSpriteGraphic(pgraph+particles2[h].frame);	
-		  
+
+		  BITMAP* src2 = engine->GetSpriteGraphic(pgraph+particles2[h].frame);
+
 
 		  int src2_width=640;
 		  int src2_height=360;
@@ -1534,7 +1553,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 		  int starty=py;
 		  int endy=py+src2_height;
 
-		  
+
 
 		  int x,y;
 		  int ny=0;
@@ -1549,7 +1568,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 				  if (setX > src2_width-1) setX=src2_width-1;
 				  if (setY< 0) setY =0;
 				  if (setY> src2_height-1) setY=src2_height-1;
-				  
+
 				  int netX=x;
 				  int netY=y;
 
@@ -1573,7 +1592,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 			  ny++;
 		  }
 
-		  
+
       }
       particles2[h].timlay+=int(6.0);
       if (particles2[h].timlay> particles2[h].mlay)
@@ -1581,14 +1600,14 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
         particles2[h].frame++;
         if (particles2[h].frame>7) particles2[h].frame=0;
         particles2[h].timlay=0;
-        particles2[h].x += particles2[h].dx+particles2[h].fx; 
-        particles2[h].y += particles2[h].dy+particles2[h].fy;//Random(1);        
+        particles2[h].x += particles2[h].dx+particles2[h].fx;
+        particles2[h].y += particles2[h].dy+particles2[h].fy;//Random(1);
       }
       particles2[h].translay+=2;
       if (particles2[h].translay>=particles2[h].translayHold)
       {
         if (particles2[h].transp<=99) particles2[h].transp++;
-        else 
+        else
         {
           particles2[h].life=0;
         }
@@ -1596,12 +1615,12 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
       if (particles2[h].x>=(ww-90)+setByx || particles2[h].x<90+setByx)
       {
         if (particles2[h].transp<=99)particles2[h].transp++;
-        else 
+        else
         {
-          particles2[h].life=0;       
+          particles2[h].life=0;
         }
       }
-      
+
       if (!particles2[h].doingcircle && particles2[h].angle==0.0
       && particles2[h].doingCircleChance<=0)
       {
@@ -1617,14 +1636,14 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
           int Y=particles2[h].y + int((sin(particles2[h].angle)* particles2[h].radius));
           int X=particles2[h].x + int((cos(particles2[h].angle)* particles2[h].radius));
           particles2[h].x=X;
-          particles2[h].y=Y;  
+          particles2[h].y=Y;
         }
       }
       particles2[h].fx=int(float(ForceX)*3.5);
       particles2[h].fy=int(float(ForceY)*3.5);
-      
+
     }
-    else 
+    else
     {
       particles2[h].active=false;
     }
@@ -1632,13 +1651,13 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 
 	//SECOND PARTICLES
 
-    
-    
+
+
     h--;
   }
 
 
-  
+
 
 
 
@@ -1647,7 +1666,7 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 
 
   engine->ReleaseBitmapSurface(src);
-  
+
 }
 
 int cid=0;
@@ -1655,16 +1674,16 @@ int cid=0;
 void CreateRainParticleMid(int x, int y, int fx, int fy)
 {
   int s=0;
-  
+
   while (s <400)
   {
     if (!RainParticles[s].active)
     {
       RainParticles[s].active=true;
       RainParticles[s].x=x;
-      RainParticles[s].y=y;            
+      RainParticles[s].y=y;
       RainParticles[s].fx=fx;
-      RainParticles[s].fy=fy;    
+      RainParticles[s].fy=fy;
       RainParticles[s].life=2000;
       RainParticles[s].trans=70+Random(25);
       RainParticles[s].transhold=Random(3);
@@ -1679,16 +1698,16 @@ void CreateRainParticleMid(int x, int y, int fx, int fy)
 void CreateRainParticleFore(int x, int y, int fx, int fy)
 {
   int s=0;
-  
+
   while (s <40)
   {
     if (!RainParticlesFore[s].active)
     {
       RainParticlesFore[s].active=true;
       RainParticlesFore[s].x=x;
-      RainParticlesFore[s].y=y;            
+      RainParticlesFore[s].y=y;
       RainParticlesFore[s].fx=fx;//int(1.5*float(fx));
-      RainParticlesFore[s].fy=fy;//int(1.5*float(fy));      
+      RainParticlesFore[s].fy=fy;//int(1.5*float(fy));
       RainParticlesFore[s].life=2000;
       RainParticlesFore[s].trans=75+Random(15);
       RainParticlesFore[s].transhold=Random(3);
@@ -1702,7 +1721,7 @@ void CreateRainParticleFore(int x, int y, int fx, int fy)
 void CreateRainParticleBack(int x, int y, int fx, int fy)
 {
   int s=0;
-  
+
   while (s <800)
   {
     if (!RainParticlesBack[s].active)
@@ -1713,12 +1732,12 @@ void CreateRainParticleBack(int x, int y, int fx, int fy)
       if (fx==0) fx=1;
       if (fy==0) fy=1;
       RainParticlesBack[s].fx=fx/2;
-      RainParticlesBack[s].fy=fy/2;      
+      RainParticlesBack[s].fy=fy/2;
       RainParticlesBack[s].life=2000;
       RainParticlesBack[s].trans=70+Random(15);
       RainParticlesBack[s].transhold=2+Random(3);
       RainParticlesBack[s].translay=0;
-      return;      
+      return;
     }
     s++;
   }
@@ -1737,9 +1756,9 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
   engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
   unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
 
-  
+
   int DiffA=-26;
-  
+
   int x, y;
   int xe;
   int ye;
@@ -1749,15 +1768,15 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
   int dy1 = abs(dy);
   int px = (2 * dy1) - dx1;
   int py = (2 * dx1) - dy1;
-  if (dy1 <= dx1) 
+  if (dy1 <= dx1)
   {
     if (dx >= 0)
     {
-      x = x1; 
+      x = x1;
       y = y1;
       xe = x2;
     }
-    else 
+    else
     {
       x = x2; y = y2; xe = x1;
     }
@@ -1768,9 +1787,9 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	if (xx2 < 0 || xx2 > src_width-1 || yy2 > src_height-1|| yy2 < 0)
 	{
 	}
-	else 
+	else
 	{
-		sprite_pixels[yy2][xx2]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));		
+		sprite_pixels[yy2][xx2]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	}
 
 	int xx3=x+320;
@@ -1779,9 +1798,9 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	if (xx3 < 0 || xx3 > src_width-1 || yy3 > src_height-1|| yy3 < 0)
 	{
 	}
-	else 
+	else
 	{
-		sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));		
+		sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	}
 
 	int xx=x;
@@ -1790,29 +1809,29 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	if (xx < 0 || xx > src_width-1 || yy > src_height-1|| yy < 0)
 	{
 	}
-	else 
+	else
 	{
 		sprite_pixels[yy][xx]=SetColorRGBA(setR,setG,setB,setA+(ALine*TranDif));
 		ALine++;
 	}
 
-	
-    
+
+
     int i=0;
     while (x < xe)
     {
       x = x + 1;
-      if (px < 0) 
+      if (px < 0)
       {
         px = px + 2 * dy1;
       }
-      else 
+      else
       {
         if ((dx < 0 && dy < 0) || (dx > 0 && dy > 0))
         {
           y = y + 1;
         }
-        else 
+        else
         {
           y = y - 1;
         }
@@ -1824,7 +1843,7 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	  if (xx2 < 0 || xx2 > src_width-1 || yy2 > src_height-1|| yy2 < 0)
 	  {
 	  }
-	  else 
+	  else
 	  {
 		  sprite_pixels[yy2][xx2]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	  }
@@ -1833,9 +1852,9 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	  if (xx3 < 0 || xx3 > src_width-1 || yy3 > src_height-1|| yy3 < 0)
 	  {
 	  }
-	  else 
+	  else
 	  {
-		  sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));	
+		  sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	  }
 
       xx=x;
@@ -1843,24 +1862,24 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	  if (xx < 0 || xx > src_width-1 || yy > src_height-1|| yy < 0)
 	  {
 	  }
-	  else 
+	  else
 	  {
 		  sprite_pixels[yy][xx]=SetColorRGBA(setR,setG,setB,setA+(ALine*TranDif));
 		  ALine++;
 	  }
-      
+
       i++;
     }
-  } 
-  else 
-  {    
-    if (dy >= 0) 
+  }
+  else
+  {
+    if (dy >= 0)
     {
-      x = x1; 
+      x = x1;
       y = y1;
       ye = y2-1;
     }
-    else 
+    else
     {
       // Line is drawn top to bottom
       x = x2;
@@ -1874,9 +1893,9 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	if (xx2 < 0 || xx2 > src_width-1 || yy2 > src_height-1|| yy2 < 0)
 	{
 	}
-	else 
+	else
 	{
-		sprite_pixels[yy2][xx2]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));		
+		sprite_pixels[yy2][xx2]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	}
 
 	int xx3=x+320;
@@ -1885,9 +1904,9 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	if (xx3 < 0 || xx3 > src_width-1 || yy3 > src_height-1|| yy3 < 0)
 	{
 	}
-	else 
+	else
 	{
-		sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));		
+		sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	}
     int xx=x;
 	int yy=y;
@@ -1895,38 +1914,38 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	if (xx < 0 || xx > src_width-1 || yy > src_height-1|| yy < 0)
 	{
 	}
-	else 
+	else
 	{
 		sprite_pixels[yy][xx]=SetColorRGBA(setR,setG,setB,setA+(ALine*TranDif));
 		ALine++;
 	}
-   
+
      int i=0;
-     while (y < ye) 
+     while (y < ye)
      {
        y = y + 1;
        if (py <= 0)
        {
          py = py + (2 * dx1);
        }
-       else 
+       else
        {
-         if ((dx < 0 && dy<0) || (dx > 0 && dy > 0)) 
+         if ((dx < 0 && dy<0) || (dx > 0 && dy > 0))
          {
            x = x + 1;
          }
-         else 
+         else
          {
            x = x - 1;
          }
          py = py + 2 * (dx1 - dy1);
-       }  
+       }
 	   xx2=x-320;
 	   yy2=y;
 	  if (xx2 < 0 || xx2 > src_width-1 || yy2 > src_height-1|| yy2 < 0)
 	  {
 	  }
-	  else 
+	  else
 	  {
 		  sprite_pixels[yy2][xx2]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	  }
@@ -1935,16 +1954,16 @@ void DrawLineCustom(int x1, int y1, int x2, int y2, int graphic,int setR,int set
 	  if (xx3 < 0 || xx3 > src_width-1 || yy3 > src_height-1|| yy3 < 0)
 	  {
 	  }
-	  else 
+	  else
 	  {
-		  sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));	
+		  sprite_pixels[yy3][xx3]=SetColorRGBA(setR,setG,setB,setA+DiffA+(ALine*TranDif));
 	  }
 	   xx=x;
 	   yy=y;
 	   if (xx < 0 || xx > src_width-1 || yy > src_height-1|| yy < 0)
 	   {
 	   }
-	   else 
+	   else
 	   {
 		   sprite_pixels[yy][xx]=SetColorRGBA(setR,setG,setB,setA+(ALine*TranDif));
 		   ALine++;
@@ -1977,7 +1996,7 @@ void BlendTwoSprites(int graphic, int refgraphic)
 
 
   int x, y;
-  
+
   for (y = 0; y < src_height; y++)
   {
     for (x = 0; x < src_width; x++)//
@@ -1988,7 +2007,7 @@ void BlendTwoSprites(int graphic, int refgraphic)
 		int bn=getBcolor(getColor);
 		int an=getAcolor(getColor);
 
-        
+
 
 
 		if (an > 0.0 && rn >4 && gn>4 && bn>4 )
@@ -2042,8 +2061,8 @@ void Blend(int graphic, int refgraphic, bool screen)
   engine->ReleaseBitmapSurface(refsrc);
 
   int x, y;
-  
-  
+
+
   for (y = 0; y < src_height; y++)
   {
     for (x = 0; x < src_width; x++)//
@@ -2054,7 +2073,7 @@ void Blend(int graphic, int refgraphic, bool screen)
 		int bn=getBcolor(getColor);
 		int an=getAcolor(getColor);
 
-        
+
 
 
 		if (an >= 0.0 && rn >4 && gn>4 && bn>4 )
@@ -2072,7 +2091,7 @@ void Blend(int graphic, int refgraphic, bool screen)
 				bj=BlendColor(bn,bj);
 				aj=BlendColor(an,aj);
 			}
-			else 
+			else
 			{
 				rj=BlendColorScreen(rn,rj);
 				gj=BlendColorScreen(gn,gj);
@@ -2082,7 +2101,7 @@ void Blend(int graphic, int refgraphic, bool screen)
 
 
 			sprite_pixels[y][x]=SetColorRGBA(rj,gj,bj,aj);
-			
+
 		}
 	}
   }
@@ -2102,26 +2121,26 @@ int IntersectLines(float x1, float y1, float x2, float y2, float x3, float y3, f
   // check a
   if (x1 == x2 && y1 == y2) return -1;
   // check b
-  if (x3 == x4 && y3 == y4) return -1;  
-  float den = (y4-y3)*(x2-x1)-(x4-x3)*(y2-y1);   
+  if (x3 == x4 && y3 == y4) return -1;
+  float den = (y4-y3)*(x2-x1)-(x4-x3)*(y2-y1);
   float num12 = (x4-x3)*(y1-y3)-(y4-y3)*(x1-x3);
   float num34 = (x2-x1)*(y1-y3)-(y2-y1)*(x1-x3);
-  
+
   if (den == 0.0) {  // no intersection
-    if (num12 == 0.0 && num34 == 0.0) return 2;  
-    return 0; 
-  }  
-  ua = num12/den;  
+    if (num12 == 0.0 && num34 == 0.0) return 2;
+    return 0;
+  }
+  ua = num12/den;
   ix = x1 + ua*(x2-x1);
-  iy = y1 + ua*(y2-y1);  
-  return 1;  
+  iy = y1 + ua*(y2-y1);
+  return 1;
 }
 
 float min4(float m1, float m2, float m3, float m4) {
-  return min(min(m1, m2), min(m3, m4));
+  return fmin(fmin(m1, m2), fmin(m3, m4));
 }
 float max4(float m1, float m2, float m3, float m4) {
-  return max(max(m1, m2), max(m3, m4));
+  return fmax(fmax(m1, m2), fmax(m3, m4));
 }
 
 int ReturnWidth(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
@@ -2130,7 +2149,7 @@ int ReturnWidth(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
   float bx = float(x2), by = float(y2);
   float cx = float(x3), cy = float(y3);
   float dx = float(x4), dy = float(y4);
-  
+
   return (int(max4(ax, bx, cx, dx))+1);
 }
 
@@ -2140,7 +2159,7 @@ int ReturnHeight(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
   float bx = float(x2), by = float(y2);
   float cx = float(x3), cy = float(y3);
   float dx = float(x4), dy = float(y4);
-  
+
   return (int(max4(ay, by, cy, dy))+1);
 }
 
@@ -2172,18 +2191,18 @@ void SetWarper(int y2x,int x3x,int y3x,int x4x,int y4x)
 	y4=y4x;
 }
 
-void Warper(int swarp,int sadjust,int x1, int y1, int x2) 
+void Warper(int swarp,int sadjust,int x1, int y1, int x2)
 {
   ix=0.0;
   iy=0.0;
   ua=0.0;
   // some precautions against non-positive values for width and height
-  
+
   float ax = float(x1), ay = float(y1);
   float bx = float(x2), by = float(y2);
   float cx = float(x3), cy = float(y3);
   float dx = float(x4), dy = float(y4);
-  
+
   int w = int(max4(ax, bx, cx, dx))+1;
   int h = int(max4(ay, by, cy, dy))+1;
 
@@ -2195,7 +2214,7 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
   unsigned int** refsprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(refsrc);
   engine->ReleaseBitmapSurface(refsrc);
 
-  
+
   // create temporary sprite holding the warped version
   BITMAP*resizeb=engine->GetSpriteGraphic(sadjust);
   int src_width=640;
@@ -2203,21 +2222,21 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
   int src_depth=32;
   engine->GetBitmapDimensions(resizeb,&src_width,&src_height,&src_depth);
   unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(resizeb);
-  
- 
+
+
   int ow = refsrc_width, oh = refsrc_height;
-    
+
   int x, y;  // pixel coords
   float fx, fy; // original sprite's in between pixel coords
 
   int il;
-  
+
   // calculate intersections of opposing sides
-  float orx_x, orx_y, ory_x, ory_y;  
+  float orx_x, orx_y, ory_x, ory_y;
   bool xp, yp; // parallel sides?
-  
+
   // AC and BD to get intersection of all "vertical lines"
-  
+
   il = IntersectLines(ax, ay, cx, cy, bx, by, dx, dy);
   if (il == 0) {
     // parallel sides, store directional vector
@@ -2243,28 +2262,28 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
     ory_x = ix;
     ory_y = iy;
   }
-  
+
   int xm = int(min4(ax, bx, cx, dx)); // x loop starts here
-  
+
   y = int(min4(ay, by, cy, dy));
   while (y < h) {
     x = xm;
     while (x < w) {
-      
+
       // calculate original pixel
-      
+
       // x:
       if (xp) il = IntersectLines(ax, ay, bx, by, float(x), float(y), float(x)+orx_x, float(y)+orx_y);
       else il = IntersectLines(ax, ay, bx, by, float(x), float(y), orx_x, orx_y);
       fx = float(ow-1)*ua;
-      
+
       float ux = ua;
-      
+
       // y:
       if (yp) il = IntersectLines(ax, ay, cx, cy, float(x), float(y), float(x)+ory_x, float(y)+ory_y);
       else il = IntersectLines(ax, ay, cx, cy, float(x), float(y), ory_x, ory_y);
       fy = float(oh-1)*ua;
-      
+
       // only draw if within original sprite
       if (ux >= 0.0 && ux <= 1.0 && ua >= 0.0 && ua <= 1.0)
 	  {
@@ -2286,16 +2305,16 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
 
       x++;
     }
-    
+
     y++;
   }
-  
-  
-  
+
+
+
   newwidth=w;
   newheight=h;
   // debugging: draw edges
-  
+
   /*
   do.DrawingColor = Game.GetColorFromRGB(255, 0, 0);
   do.DrawLine(x1, y1, x2, y2);
@@ -2305,11 +2324,11 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
   */
   engine->ReleaseBitmapSurface(resizeb);
   //this.ChangeCanvasSize(w, h, 0, 0);
-  
+
 
   //RETURN HEIGHT AND WIDTH
   //RETURN DYNAMIC SPRITE GRAPH?
-  
+
 }
 
 //WARP CODE
@@ -2332,7 +2351,7 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
   bool drawMid=true;
   bool drawFore=true;
   int h=0;
-  
+
   int cdelay=0;
   while (cdelay <rdensity)
   {
@@ -2345,7 +2364,7 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
 	}
     cdelay++;
   }
-  
+
   BITMAP* src = engine->GetSpriteGraphic(graphic);
   int src_width=640;
   int src_height=360;
@@ -2354,7 +2373,7 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
   unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
 
 
-  
+
   int rotAngle=6;
   int rotTrans=60+Random(40+60);//Random(103)+122;
   int rotX=-50;
@@ -2391,104 +2410,104 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
           RainParticlesFore[h].translay=0;
           RainParticlesFore[h].trans+=2;
         }
-        
+
         int setRainTrans = RainParticlesFore[h].trans+8+Random(10)+totalTrans;
-        if (setRainTrans>100) 
+        if (setRainTrans>100)
         {
           setRainTrans=100;
         }
-        
+
         if (RainParticlesFore[h].y>RH+30
         || RainParticlesFore[h].trans==100)
         {
           RainParticlesFore[h].active=false;
         }
-        else 
+        else
         {
           //int thick =3;
 		  //DRAW LINE
 		  int alpha = int (float((255*(100-setRainTrans)))/100.0);
 
-		  
-		 
+
+
 
 		  int x1=RainParticlesFore[h].x;
 		  int y1=RainParticlesFore[h].y;
 		  int x2=RainParticlesFore[h].x+(RainParticlesFore[h].fx*2);
 		  int y2=RainParticlesFore[h].y+(RainParticlesFore[h].fy*2);
 
-		  
-          
-		  DrawLineCustom(x1,y1,x2,y2,graphic,255-120,255-120,255-120,alpha-80,6);	
-		  DrawLineCustom(x1-1,y1,x2-1,y2,graphic,255-120,255-120,255-120,alpha-80,6);	
 
 
-		  DrawLineCustom((x1-rotX),y1-rotY,(x2-rotX)-rotAngle,y2-rotY,graphic,255-120,255-120,255-120,(alpha-80)-rotTrans,6);	
+		  DrawLineCustom(x1,y1,x2,y2,graphic,255-120,255-120,255-120,alpha-80,6);
+		  DrawLineCustom(x1-1,y1,x2-1,y2,graphic,255-120,255-120,255-120,alpha-80,6);
+
+
+		  DrawLineCustom((x1-rotX),y1-rotY,(x2-rotX)-rotAngle,y2-rotY,graphic,255-120,255-120,255-120,(alpha-80)-rotTrans,6);
 		  DrawLineCustom((x1-1)-rotX,y1-rotY,((x2-1)-rotX)-rotAngle,y2-rotY,graphic,255-120,255-120,255-120,(alpha-80)-rotTrans,6);
 
-		  
+
 		  RainParticlesFore[h].x += RainParticlesFore[h].fx;
           RainParticlesFore[h].y += RainParticlesFore[h].fy;
-        }  
+        }
       }
-      else 
+      else
       {
         RainParticlesFore[h].life=0;
         RainParticlesFore[h].active=false;
       }
-    }    
+    }
     //FORE
-    
-    
+
+
     //MID
   if (h < drawMid)
   {
     if (RainParticles[h].life>0 && RainParticles[h].active)
     {
       RainParticles[h].life-=4;
-      
+
       RainParticles[h].translay+=2;
       if (RainParticles[h].translay>RainParticles[h].transhold)
       {
         RainParticles[h].translay=0;
         RainParticles[h].trans+=3;
       }
-      
-      
+
+
       int setRainTrans = RainParticles[h].trans+4+Random(5)+totalTrans;
-      if (setRainTrans>100) 
+      if (setRainTrans>100)
       {
         setRainTrans=100;
       }
-      
+
       if (RainParticles[h].y>RH+30
       || RainParticles[h].trans==100)
       {
         RainParticles[h].active=false;
       }
-      else 
-      {       
-        //int thick=2;        
+      else
+      {
+        //int thick=2;
         //DRAW LINE
 		int alpha = int (float((255*(100-setRainTrans)))/100.0);
-        
+
         int x1=RainParticles[h].x;
 		int y1=RainParticles[h].y;
 		int x2=RainParticles[h].x+RainParticles[h].fx;
 		int y2=RainParticles[h].y+RainParticles[h].fy;
-		
-		DrawLineCustom(x1,y1,x2,y2,graphic,255-40,255-40,255-40,alpha,6);		
+
+		DrawLineCustom(x1,y1,x2,y2,graphic,255-40,255-40,255-40,alpha,6);
 		DrawLineCustom(x1-1,y1,x2-1,y2,graphic,255-40,255-40,255-40,alpha,6);
 
-		DrawLineCustom((x1)-rotX,y1-rotY,(x2-rotX)-rotAngle,y2-rotY,graphic,255-40,255-40,255-40,alpha-rotTrans,6);		
+		DrawLineCustom((x1)-rotX,y1-rotY,(x2-rotX)-rotAngle,y2-rotY,graphic,255-40,255-40,255-40,alpha-rotTrans,6);
 		DrawLineCustom((x1-1)-rotX,y1-rotY,((x2-1)-rotX)-rotAngle,y2-rotY,graphic,255-40,255-40,255-40,alpha-rotTrans,6);
 
         RainParticles[h].x += RainParticles[h].fx;
         RainParticles[h].y += RainParticles[h].fy;
       }
-      
+
     }
-    else 
+    else
     {
       RainParticles[h].life=0;
       RainParticles[h].active=false;
@@ -2506,19 +2525,19 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
           RainParticlesBack[h].translay=0;
           RainParticlesBack[h].trans++;
         }
-        
+
         int setRainTrans = RainParticlesBack[h].trans+totalTrans;//+8+Random(10);
-        if (setRainTrans>100) 
+        if (setRainTrans>100)
         {
           setRainTrans=100;
         }
-        
+
         if (RainParticlesBack[h].y>RH+30
         || RainParticlesBack[h].trans==100)
         {
           RainParticlesBack[h].active=false;
         }
-        else 
+        else
         {
           //int thick =1;
           //DRAW LINE
@@ -2533,26 +2552,26 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
 
           RainParticlesBack[h].x += RainParticlesBack[h].fx;
           RainParticlesBack[h].y += RainParticlesBack[h].fy;
-        }  
+        }
       }
-      else 
+      else
       {
         RainParticlesBack[h].life=0;
         RainParticlesBack[h].active=false;
       }
    }
    h++;
-   }    
+   }
     //BACK
-    
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
+
+
   engine->ReleaseBitmapSurface(src);
 }
 
@@ -2561,23 +2580,23 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
 
 void ReadWalkBehindIntoSprite(int sprite,int bgsprite,int walkbehindBaseline)
 {
-	BITMAP* src = engine->GetSpriteGraphic(sprite);	
-	BITMAP* bgsrc = engine->GetSpriteGraphic(bgsprite);	
+	BITMAP* src = engine->GetSpriteGraphic(sprite);
+	BITMAP* bgsrc = engine->GetSpriteGraphic(bgsprite);
 	int src_width=640;
 	int src_height=360;
 	int src_depth=32;
 	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
 	BITMAP* wbh =engine->GetRoomMask(MASK_WALKBEHIND);
-	
+
 	unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
 	unsigned int** bgsprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(bgsrc);
 	unsigned char **walk_pixels = engine->GetRawBitmapSurface (wbh); //8bit
-    
-	
-	engine->ReleaseBitmapSurface(wbh); 
-	engine->ReleaseBitmapSurface(bgsrc); 
 
-	
+
+	engine->ReleaseBitmapSurface(wbh);
+	engine->ReleaseBitmapSurface(bgsrc);
+
+
 
 	 //WE GRAB ALL OF THEM INTO A BITMAP and thus we know where they are drawn
 	 int x,y;
@@ -2586,11 +2605,11 @@ void ReadWalkBehindIntoSprite(int sprite,int bgsprite,int walkbehindBaseline)
 		 for (x = 0; x < src_width; x++)
 		 {
 			 //READ COLOR
-			
+
 			 if (walk_pixels[y][x]>0)
 			 {
 				 int grabBaseline=engine->GetWalkbehindBaseline(walk_pixels[y][x]);
-				 
+
 				 if (grabBaseline==walkbehindBaseline)
 				 {
 					 sprite_pixels[y][x] = bgsprite_pixels[y][x];
@@ -2604,7 +2623,7 @@ void ReadWalkBehindIntoSprite(int sprite,int bgsprite,int walkbehindBaseline)
 
 void Grayscale(int sprite)
 {
-	BITMAP* src = engine->GetSpriteGraphic(sprite);	
+	BITMAP* src = engine->GetSpriteGraphic(sprite);
 	unsigned int** pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
 
 	int src_width=640;
@@ -2612,17 +2631,17 @@ void Grayscale(int sprite)
 	int src_depth=32;
 
 	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
-	
+
 	int x,y;
 	for (y = 0; y < src_height; y++)
 	{
 		for (x = 0; x < src_width; x++)
 		{
-			int color = ConvertColorToGrayScale(pixels[y][x]);	
+			int color = ConvertColorToGrayScale(pixels[y][x]);
 			pixels[y][x]= color;
 		}
 	}
-    
+
 
 	engine->ReleaseBitmapSurface(src);
 
@@ -2634,7 +2653,7 @@ void DrawBlur(int spriteD, int radius)
 	int spriteD2=spriteD;
 	BITMAP* src = engine->GetSpriteGraphic(spriteD);
 	BITMAP* src2 = engine->GetSpriteGraphic(spriteD2);
-	
+
 	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
 	unsigned int** pixela = (unsigned int**)engine->GetRawBitmapSurface(src2);
 	engine->ReleaseBitmapSurface(src2);
@@ -2643,7 +2662,7 @@ void DrawBlur(int spriteD, int radius)
 	int src_depth=32;
 
 	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
-	
+
 
     int x,y;
 	for (y = 0; y < src_height; y++)
@@ -2653,7 +2672,7 @@ void DrawBlur(int spriteD, int radius)
 			int totalRed=0;
 			int totalGreen=0;
 			int totalBlue=0;
-			
+
 			int vx=-(radius);
 			int pixels_parsed=0;
 
@@ -2666,14 +2685,14 @@ void DrawBlur(int spriteD, int radius)
 				int setX=x+vx;
 				if (setX<0) setX=0;
 				if (setX>src_width-1) setX=src_width-1;
-				
-				
+
+
 				int color = pixela[setY][setX];
-				
+
 				totalRed+=getRcolor(color);
 				totalGreen+=getGcolor(color);
 				totalBlue+=getBcolor(color);
-				
+
 				pixels_parsed++;
 				vx++;
 			}
@@ -2685,7 +2704,7 @@ void DrawBlur(int spriteD, int radius)
 			int r=int(clamp(rN,0.0,255.0));
 			int g=int(clamp(gN,0.0,255.0));
 			int b=int(clamp(bN,0.0,255.0));
-			
+
 
 			pixelb[y][x]= ((r << 16) | (g << 8) | (b << 0) | (255 << 24));
 
@@ -2693,7 +2712,7 @@ void DrawBlur(int spriteD, int radius)
 
 		}
 	}
-    
+
 
 	engine->ReleaseBitmapSurface(src);
 	src = engine->GetSpriteGraphic(spriteD);
@@ -2707,27 +2726,27 @@ void DrawBlur(int spriteD, int radius)
 			int totalRed=0;
 			int totalGreen=0;
 			int totalBlue=0;
-			
+
 			int pixels_parsed=0;
 			int setX=x;
 			if (setX<0) setX=0;
 			if (setX>src_width-1) setX=src_width-1;
-			
+
 			int vy=-(radius);
 			while (vy <(radius)+1)
 			{
 				int setY=y+vy;
 				if (setY<0) setY=0;
 				if (setY>src_height-1) setY=src_height-1;
-				
+
 				int color = pixela[setY][setX];
-				
+
 				totalRed+=getRcolor(color);
 				totalGreen+=getGcolor(color);
 				totalBlue+=getBcolor(color);
-				
+
 				pixels_parsed++;
-				    
+
 			    vy++;
 			}
 
@@ -2738,7 +2757,7 @@ void DrawBlur(int spriteD, int radius)
 			int r=int(clamp(rN,0.0,255.0));
 			int g=int(clamp(gN,0.0,255.0));
 			int b=int(clamp(bN,0.0,255.0));
-			
+
 
 			pixelb[y][x]= ((r << 16) | (g << 8) | (b << 0) | (255 << 24));
 
@@ -2754,12 +2773,12 @@ void DrawBlur(int spriteD, int radius)
 
 
 
-float dotProduct(float vect_Ax,float vect_Ay, float vect_Bx, float vect_By) 
-{ 
-    float product = 0.0;  
-	product += vect_Ax * vect_Ay; 
-    product += vect_Bx * vect_By; 
-    return product; 
+float dotProduct(float vect_Ax,float vect_Ay, float vect_Bx, float vect_By)
+{
+    float product = 0.0;
+	product += vect_Ax * vect_Ay;
+    product += vect_Bx * vect_By;
+    return product;
 }
 
 float fracts(float value)
@@ -2778,7 +2797,7 @@ float randr (float stx, float sty)
 
 float lerp(float x, float y, float fn)
 {
-    return x*(1.0-fn)+y*fn;	
+    return x*(1.0-fn)+y*fn;
 }
 
 float noise (float stx,float sty)
@@ -2798,7 +2817,7 @@ float noise (float stx,float sty)
 	float uy=fy*fy*(3.0-2.0*fy);
 
 	float mix=lerp(a,b,ux);
-	float value = mix + 
+	float value = mix +
 		(c-a)*uy*(1.0 -ux)+
 		(d-b)*ux*uy;
 	return value;
@@ -2835,13 +2854,13 @@ float noiseN(float px,float py, float s)
     float iy=floor(py);
     float fx=fracts(px);
     float fy=fracts(py);
-	
+
     fx *= fx * (3.0-2.0*fx);
     fy *= fy * (3.0-2.0*fy);
     float mixA=lerp(Hash(ix,iy, s), Hash(ix+1.0,iy +0.0, s),fx);
     float mixB=lerp(Hash(ix,iy+1.0, s), Hash(ix+1.0,iy+1.0, s),fx);
     float mixC = lerp(mixA,mixB,fy)*s;
-	
+
     return mixC;
 }
 float fbmN(float px,float py)
@@ -2859,15 +2878,15 @@ void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, b
 	if (n_time[id]<1.0) n_time[id]=1.0;
 	n_time[id]+=ady;
 	BITMAP* src = engine->GetSpriteGraphic(spriteD);
-	
+
 	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
-	
+
 	int src_width=640;
 	int src_height=360;
 	int src_depth=32;
 
 	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
-	
+
 
     int x,y;
 	for (y = 0; y < src_height; y++)
@@ -2880,7 +2899,7 @@ void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, b
 			int setX=x;
 			if (setX<0) setX=0;
 			//if (setX>src_width-1) setX=src_width-1;
-			
+
 			float uvx=(float(x)/float(scalex))*2.0 - 1.0;
 			float uvy=(float((src_height/-2)+y)/float(scaley))*2.0 - 1.0;
 			uvx *= float(scalex)/float(scaley);
@@ -2893,20 +2912,20 @@ void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, b
 			float fg=0.0;
 			float fb=0.0;
 			fr += t * (0.839);
-			fr += t * (0.49);	
-			fg += t * (0.784);	
+			fr += t * (0.49);
+			fg += t * (0.784);
 			fb += t * (2.82);
 			//gl_FragColor = vec4( vec3(fr,fg,fb), 1.0 );
 			int Rd=int(fr*255.0);
 			int Gd=int(fg*255.0);
 			int Bd=int(fb*255.0);
 			int na=int((t*1.0)*255.0);
-			
+
 			pixelb[setY][setX]= SetColorRGBA(Rd,Gd,Bd,na);
-			
+
 		}
 	}
-    
+
 
 	engine->ReleaseBitmapSurface(src);
 
@@ -2918,18 +2937,18 @@ void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, b
 
 void DrawCloud(int spriteD, int scale, float speed)
 {
-	
+
 	u_time+=speed;
 	BITMAP* src = engine->GetSpriteGraphic(spriteD);
-	
+
 	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
-	
+
 	int src_width=640;
 	int src_height=360;
 	int src_depth=32;
 
 	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
-	
+
 	float shade1x= float(R1)/255.0;
 	float shade1y= float(G1)/255.0;
 	float shade1z= float(B1)/255.0;
@@ -2951,7 +2970,7 @@ void DrawCloud(int spriteD, int scale, float speed)
 	{
 		for (x = 0; x < src_width; x++)
 		{
-			
+
 
 			int setY=y;
 			if (setY<0) setY=0;
@@ -2960,28 +2979,28 @@ void DrawCloud(int spriteD, int scale, float speed)
 			if (setX<0) setX=0;
 			//if (setX>src_width-1) setX=src_width-1;
 
-			
+
 			float frx=float(x)/float(scale);//140
 			float fry=float(y)/float(scale);
-			
+
 			float qx = fbm(frx,fry);
-			float qy = fbm(frx+ 1.0,fry + 1.0);    
+			float qy = fbm(frx+ 1.0,fry + 1.0);
 			float rx = fbm(frx+ 1.0*qx + 1.7+ 0.15*u_time,fry + 1.0*qy + 9.2+ 0.15*u_time);
 			float ry = fbm(frx + 1.0*qx + 8.3+ 0.126*u_time,fry + 1.0*qy + 2.8+ 0.126*u_time);
-			
+
 			float colorx,colory,colorz;
 			float fn = fbm(frx+rx,fry+ry);
-			
+
 			float setFZ=clamp((fn*fn)*4.0,0.2,1.0);
 
 			colorx = lerp(float(shade1x),float(shade2x),setFZ);
 			colory = lerp(float(shade1y),float(shade2y),setFZ);
 			colorz = lerp(float(shade1z),float(shade2z),setFZ);
-			
-			float lenner = sqrt(qx*qx + qy*qy);			
+
+			float lenner = sqrt(qx*qx + qy*qy);
 
 			setFZ=clamp(lenner,float(0.0),float(1.0));
-			
+
 			colorx = lerp(colorx,float(shade3x),setFZ);
 			colory = lerp(colory,float(shade3y),setFZ);
 			colorz = lerp(colorz,float(shade3z),setFZ);
@@ -2990,18 +3009,18 @@ void DrawCloud(int spriteD, int scale, float speed)
 			colorx = lerp(colorx,float(shade4x),setFZ);
 			colory = lerp(colory,float(shade4y),setFZ);
 			colorz = lerp(colorz,float(shade4z),setFZ);
-			float id =(fn*fn*fn+0.8*fn*fn+0.78*fn);	
+			float id =(fn*fn*fn+0.8*fn*fn+0.78*fn);
 
 			int Rd=int((colorx*id)*255.0);
 			int Gd=int((colory*id)*255.0);
 			int Bd=int((colorz*id)*255.0);
 			int na=int(1.0*255.0);
-			
+
 			pixelb[setY][setX]= SetColorRGBA(Rd,Gd,Bd,na);
-			
+
 		}
 	}
-    
+
 
 	engine->ReleaseBitmapSurface(src);
 
@@ -3037,7 +3056,7 @@ void SetColorShade(int Rn,int Gn,int Bn,int idn)
 }
 
 bool IsPixelTransparent(int color)
-{	
+{
 	int rd=getRcolor(color);
 	int gd=getGcolor(color);
 	int bd=getBcolor(color);
@@ -3056,7 +3075,7 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 {
 	BITMAP* src = engine->GetSpriteGraphic(sprite);
 	unsigned int** pixel_src = (unsigned int**)engine->GetRawBitmapSurface(src);
-	
+
 	int src_width=640;
 	int src_height=360;
 	int src_depth=32;
@@ -3064,7 +3083,7 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 
 	//OUTLINE
 	engine->ReleaseBitmapSurface(src);
-    
+
 
 	BITMAP*dst = engine->GetSpriteGraphic(sprite);
 	unsigned int** pixel_dst = (unsigned int**)engine->GetRawBitmapSurface(dst);
@@ -3078,7 +3097,7 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 			if (!IsPixelTransparent(pixel_src[y][x]))
 			{
 			}
-			else 
+			else
 			{
 				int pcount=0;
 				int gy=-1;
@@ -3099,7 +3118,7 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 						{
 							pcount++;
 						}
-						
+
 						gx++;
 					}
 					gy++;
@@ -3108,7 +3127,7 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 				if (pcount >=2)
 				{
 					int colorLeft=SetColorRGBA(red,ged,bed,aed);
-					pixel_dst[y][x]=colorLeft;				
+					pixel_dst[y][x]=colorLeft;
 				}
 
 				/*
@@ -3133,9 +3152,9 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 					pixel_dst[y][x+1]=colorLeft;
 				}*/
 
-				
+
 			}
-		}	
+		}
 
 	}
 
@@ -3162,7 +3181,7 @@ int translayHold;
 
 DustParticle dusts[200];
 int waitBy=6;
-int raysizeDust=200; 
+int raysizeDust=200;
 int dsizeDust=0;
 int creationdelay=0;
 
@@ -3182,7 +3201,7 @@ void CreateDustParticle(int xx, int yy)
     }
     h++;
   }
-  
+
   if (founddust)
   {
     int d=fid;
@@ -3231,23 +3250,23 @@ int CalculateThings(bool clap,int ids)
   int RoomObjectCount=engine->GetNumObjects ();
   int GameCharacterCount=engine->GetNumCharacters();
   int MaxWalkBehinds=15;
-  
+
   int pid= engine->GetPlayerCharacter();
   AGSCharacter *pchar = engine->GetCharacter(pid);
   int playerRoom=pchar->room;
-  
-  
+
+
   if (playerRoom==41 || playerRoom==12)
   {
     RoomObjectCount=-1;
   }
- 
-  
-  
+
+
+
   while (i < RoomObjectCount)
   {
 	  AGSObject *objec=engine->GetObject(i);
-	  
+
     int baseLine = objec->baseline;
     if (baseLine <= 0)
     {
@@ -3258,7 +3277,7 @@ int CalculateThings(bool clap,int ids)
 	  if (ids==1 && (i==20))
       {
       }
-      else 
+      else
       {
       ItemToDraw[numThingsToDraw].objIndex = i;
       ItemToDraw[numThingsToDraw].chrIndex = -1;
@@ -3269,13 +3288,13 @@ int CalculateThings(bool clap,int ids)
       {
         ItemToDraw[numThingsToDraw].baseLine +=1000;
       }
-      numThingsToDraw++; 
+      numThingsToDraw++;
 	  }
     }
     i++;
   }
   i = 0;
-  
+
   while (i < GameCharacterCount)
   {
 	AGSCharacter *getchar=engine->GetCharacter(i);
@@ -3288,11 +3307,11 @@ int CalculateThings(bool clap,int ids)
 		  baseLine = getchar->y;
       }
 	  if (getchar->transparency<100)
-      { 
+      {
         if (ids==1 && (i==0 || i==45 || i==62))
         {
         }
-        else 
+        else
         {
         ItemToDraw[numThingsToDraw].objIndex = -1;
         ItemToDraw[numThingsToDraw].chrIndex = i;
@@ -3303,19 +3322,19 @@ int CalculateThings(bool clap,int ids)
         {
           ItemToDraw[numThingsToDraw].baseLine +=1000;
         }
-        numThingsToDraw++; 
+        numThingsToDraw++;
 		}
       }
     }
     i++;
   }
-  
+
   //PARSE THE WALKBEHINDS
   i=1;
   while (i <= MaxWalkBehinds)
   {
     ItemToDraw[numThingsToDraw].objIndex=-1;
-    ItemToDraw[numThingsToDraw].chrIndex=-1;	
+    ItemToDraw[numThingsToDraw].chrIndex=-1;
     ItemToDraw[numThingsToDraw].baseLine=Walkbehind[i];
 	//Walkbehind[i]=ItemToDraw[numThingsToDraw].baseLine;
     ItemToDraw[numThingsToDraw].walkIndex=i;
@@ -3323,8 +3342,8 @@ int CalculateThings(bool clap,int ids)
     i++;
   }
   //PARSE THE WALKBEHINDS
-  
-  
+
+
   // now bubble sort
   i = 0;
   while (i < numThingsToDraw-1)
@@ -3332,9 +3351,9 @@ int CalculateThings(bool clap,int ids)
     int j = i+1;
     while (j < numThingsToDraw)
     {
-      
+
       bool cond = ItemToDraw[j].baseLine < ItemToDraw[i].baseLine;
-      
+
       if (cond)
       {
         // swap
@@ -3342,8 +3361,8 @@ int CalculateThings(bool clap,int ids)
         int chrIndex = ItemToDraw[j].chrIndex;
         int wlkIndex = ItemToDraw[j].walkIndex;
         int baseLine = ItemToDraw[j].baseLine;
-        
-        
+
+
         ItemToDraw[j].objIndex = ItemToDraw[i].objIndex;
         ItemToDraw[j].chrIndex = ItemToDraw[i].chrIndex;
         ItemToDraw[j].walkIndex = ItemToDraw[i].walkIndex;
@@ -3351,8 +3370,8 @@ int CalculateThings(bool clap,int ids)
         ItemToDraw[i].objIndex = objIndex;
         ItemToDraw[i].chrIndex = chrIndex;
         ItemToDraw[i].walkIndex = wlkIndex;
-        ItemToDraw[i].baseLine = baseLine;     
-        
+        ItemToDraw[i].baseLine = baseLine;
+
       }
       j++;
     }
@@ -3388,7 +3407,7 @@ int Baseindex(int i)
 
 void FireUpdate(int getDynamicSprite, bool Fire2Visible)
 {
-  
+
 
   BITMAP* src = engine->GetSpriteGraphic(getDynamicSprite);
   unsigned int** pixel_src = (unsigned int**)engine->GetRawBitmapSurface(src);
@@ -3398,14 +3417,14 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
   engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
 
 	//OUTLINE
-	
-  
-  
+
+
+
   creationdelay+=int(2.0);
   if (creationdelay > 4 && Fire2Visible)
   {
-    
-    
+
+
     int by=0;
     while (by <6)
     {
@@ -3422,11 +3441,11 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
       dnx=95+(Random(535-95));
       dny=Random(236);
 	  getID=sfGetRegionXY(dnx,dny);
-    }    
+    }
     CreateDustParticle(dnx, dny);
     by++;
     }
-    
+
     creationdelay=0;
   }
   int h=dsizeDust-1;
@@ -3435,7 +3454,7 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
     if (dusts[h].life>0)
     {
       dusts[h].life-=int(2.0);
-     
+
       int setX=dusts[h].x;
 	  int setY=dusts[h].y;
 
@@ -3453,7 +3472,7 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
 
 	  av =int((float(255*(150-dusts[h].transp)))/100.0);
 
-      
+
 	  pixel_src[setY][setX]=SetColorRGBA(rv,gv,bv,av);
 
       //drawt.DrawImage(dusts[h].x, dusts[h].y, sg, dusts[h].transp);
@@ -3461,8 +3480,8 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
       if (dusts[h].timlay> dusts[h].mlay)
       {
         dusts[h].timlay=0;
-        dusts[h].x += dusts[h].dx+Random(1); 
-        dusts[h].y += dusts[h].dy-(Random(1));  
+        dusts[h].x += dusts[h].dx+Random(1);
+        dusts[h].y += dusts[h].dy-(Random(1));
       }
       dusts[h].translay+=2;
       if (dusts[h].translay>=dusts[h].translayHold)
@@ -3471,19 +3490,19 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
         else dusts[h].life=0;
       }
     }
-    else 
+    else
     {
       dusts[h].active=false;
     }
     h--;
   }
-  
-  
-  
+
+
+
   engine->ReleaseBitmapSurface(src);
   /*
   int Rf=Random(100);
-  
+
   if (Rf<50) screen1bg.Tint(255, 128, 0, 100, 100);
   else screen1bg.Tint(231, 71, 24, 100, 100);
   if (oFire.X!=0 && oFire.Y!=360)
@@ -3498,16 +3517,16 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
   oFire.Transparency=0;
   oFire.Graphic=screen1bg.Graphic;
   */
-  
+
 }
 
 void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int blx)
 {
 
-    
+
 	BITMAP* src = engine->GetSpriteGraphic(sprite);
 	BITMAP* src2 = engine->GetSpriteGraphic(lightx);
-	
+
 	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
 	unsigned int** pixela = (unsigned int**)engine->GetRawBitmapSurface(src2);
 	engine->ReleaseBitmapSurface(src2);
@@ -3516,7 +3535,7 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 	int src_depth=32;
 
 	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
-	
+
 
     int x,y;
 	for (y = 0; y < src_height; y++)
@@ -3526,7 +3545,7 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 			int totalRed=0;
 			int totalGreen=0;
 			int totalBlue=0;
-			
+
 			int vx=-(radi);
 			int pixels_parsed=0;
 
@@ -3539,17 +3558,17 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 				int setX=x+vx;
 				if (setX<0) setX=0;
 				if (setX>src_width-1) setX=src_width-1;
-				
-				
+
+
 				int color = pixela[setY][setX];
-				
-				
+
+
 				totalRed+=getRcolor(color);
 				totalGreen+=getGcolor(color);
 				totalBlue+=getBcolor(color);
-				
+
 				pixels_parsed++;
-				
+
 				vx++;
 			}
 
@@ -3563,7 +3582,7 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 
 			if (r > rex && g>grx && b>blx)
 			{
-			
+
 
 			pixelb[y][x]= ((r << 16) | (g << 8) | (b << 0) | (255 << 24));
 
@@ -3574,7 +3593,7 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 
 		}
 	}
-    
+
 
 	engine->ReleaseBitmapSurface(src);
 	src = engine->GetSpriteGraphic(sprite);
@@ -3588,28 +3607,28 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 			int totalRed=0;
 			int totalGreen=0;
 			int totalBlue=0;
-			
+
 			int pixels_parsed=0;
 			int setX=x;
 			if (setX<0) setX=0;
 			if (setX>src_width-1) setX=src_width-1;
-			
+
 			int vy=-(radi);
 			while (vy <(radi)+1)
 			{
 				int setY=y+vy;
 				if (setY<0) setY=0;
 				if (setY>src_height-1) setY=src_height-1;
-				
+
 				int color = pixela[setY][setX];
-				
+
 				totalRed+=getRcolor(color);
 				totalGreen+=getGcolor(color);
 				totalBlue+=getBcolor(color);
-				
+
 				pixels_parsed++;
-				
-				    
+
+
 			    vy++;
 			}
 
@@ -3620,7 +3639,7 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 			int r=int(clamp(rN,0.0,255.0));
 			int g=int(clamp(gN,0.0,255.0));
 			int b=int(clamp(bN,0.0,255.0));
-			
+
 			if (r > rex && g>grx && b>blx)
 			{
 				pixelb[y][x]= ((r << 16) | (g << 8) | (b << 0) | (255 << 24));
@@ -3640,8 +3659,8 @@ void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int b
 
 void AdjustSpriteFont(int sprite,int rate,int outlineRed,int outlineGreen,int outlineBlue)
 {
-  
-  
+
+
   BITMAP* src = engine->GetSpriteGraphic(sprite);
   unsigned int** pixel_src = (unsigned int**)engine->GetRawBitmapSurface(src);
 
@@ -3651,7 +3670,7 @@ void AdjustSpriteFont(int sprite,int rate,int outlineRed,int outlineGreen,int ou
   engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
 
   int x, y;
-  
+
   int px=1;
   bool found=false;
   for (y = 0; y < src_height; y++)
@@ -3678,7 +3697,7 @@ void AdjustSpriteFont(int sprite,int rate,int outlineRed,int outlineGreen,int ou
 				pixel_src[y][x]=SetColorRGBA(outlineRed,outlineGreen,outlineBlue,255);
 			}
 		}
-		else 
+		else
 		{
 			havefound=true;
 			found=true;
@@ -3686,8 +3705,8 @@ void AdjustSpriteFont(int sprite,int rate,int outlineRed,int outlineGreen,int ou
 			green-=(px*rate);
 			blue-=(px*rate);
 
-			
-			
+
+
 			pixel_src[y][x]=SetColorRGBA(red,green,blue,255);
 		}
 	}
@@ -3708,8 +3727,8 @@ void AdjustSpriteFont(int sprite,int rate,int outlineRed,int outlineGreen,int ou
 
 void SpriteGradient(int sprite,int rate,int toy)
 {
-  
-  
+
+
   BITMAP* src = engine->GetSpriteGraphic(sprite);
   unsigned int** pixel_src = (unsigned int**)engine->GetRawBitmapSurface(src);
 
@@ -3720,7 +3739,7 @@ void SpriteGradient(int sprite,int rate,int toy)
 
   int x, y;
   int setA=0;
-  
+
   for (y = toy; y < src_height; y++)
   {
     for (x = 0; x < src_width; x++)
@@ -3736,7 +3755,7 @@ void SpriteGradient(int sprite,int rate,int toy)
 		{
 		pixel_src[y][x]=SetColorRGBA(red,green,blue,alpha);
 		}
-		
+
 	}
 	setA+=rate;
   }
@@ -3748,8 +3767,8 @@ void SpriteGradient(int sprite,int rate,int toy)
 
 void SpriteSkew(int sprite,float xskewmin, float yskewmin,float xskewmax, float yskewmax)
 {
-  
-  
+
+
   BITMAP* src = engine->GetSpriteGraphic(sprite);
   unsigned int** pixel_src = (unsigned int**)engine->GetRawBitmapSurface(src);
 
@@ -3763,12 +3782,12 @@ void SpriteSkew(int sprite,float xskewmin, float yskewmin,float xskewmax, float 
   unsigned int** pixel_dest = (unsigned int**)engine->GetRawBitmapSurface(dest);
 
   int x, y;
-  
+
   float raty = abs(yskewmin-yskewmax)/float(src_height*src_width);
   float ratx = abs(xskewmin-xskewmax)/float(src_height*src_width);
   float yskew=yskewmin;
   float xskew=xskewmin;
-  
+
   for (y = 0; y < src_height; y++)
   {
     for (x = 0; x < src_width; x++)
@@ -3787,10 +3806,10 @@ void SpriteSkew(int sprite,float xskewmin, float yskewmin,float xskewmax, float 
 		int blue=getBcolor(getColor);
 		int alpha=getAcolor(getColor);
 
-		
+
 
         pixel_dest[y][x] = SetColorRGBA(red,green,blue,alpha);
-		
+
 		if (xskewmin<xskewmax) xskew+=ratx;
 		else xskew-=ratx;
 
@@ -3807,7 +3826,7 @@ void SpriteSkew(int sprite,float xskewmin, float yskewmin,float xskewmax, float 
 void DrawEffect(int sprite_a,int sprite_b,int id,int n)
 {
   int x, y;
-  
+
   BITMAP* src_a = engine->GetSpriteGraphic(sprite_a);
   BITMAP* src_b = engine->GetSpriteGraphic(sprite_b);
 
@@ -3818,28 +3837,28 @@ void DrawEffect(int sprite_a,int sprite_b,int id,int n)
   int src_height=360;
   int src_depth=32;
   engine->GetBitmapDimensions(src_a,&src_width,&src_height,&src_depth);
- 
-	
+
+
 
   for (y = 0; y < src_height; y++)
   {
 	if (id==1) CastWave(15,1,n);
 	if (id==0 || id==9||id==2 || id==3 || id==6 || id==8) CastWave(2,1,n);
 	if (id==4) CastWave(15,4,n);
-	if (id==5 || id==7 || id==10) 
+	if (id==5 || id==7 || id==10)
 	{
 		//x=0;
 		CastWave(3,1,n);
 	}
-	if (id==11) 
+	if (id==11)
 	{
 		//x=0;
 		CastWave(3,2,n);
 	}
 	if (id==16) CastWave(4,1,n);
 	if (id==17) CastWave(6,1,n);
-	
-	
+
+
     for (x = 0; x < src_width; x++)
     {
 	  unsigned int colorfromB = pixel_b[y][x];
@@ -3867,7 +3886,7 @@ void DrawEffect(int sprite_a,int sprite_b,int id,int n)
 		  getY=y-(rand() % 2)-2;
 	  }
 	  if (id==5)
-	  {		  
+	  {
 		  getX=x+dY[n];
 		  getY=y-(rand() % 2)-2;
 	  }
@@ -3877,7 +3896,7 @@ void DrawEffect(int sprite_a,int sprite_b,int id,int n)
 		  getY=y-(rand() % 1)-1;
 	  }
 	  if (id==7 || id==17)
-	  {		  
+	  {
 		  getX=x+dY[n];
 		  getY=y-(rand() % 1)-1;
 	  }
@@ -3887,7 +3906,7 @@ void DrawEffect(int sprite_a,int sprite_b,int id,int n)
 		  getY=y+(rand() % 2)-2;
 	  }
 	  if (id==10 || id==9 || id==11)
-	  {		  
+	  {
 		  getX=x+dY[n];
 		  getY=y;
 	  }
@@ -3896,12 +3915,12 @@ void DrawEffect(int sprite_a,int sprite_b,int id,int n)
 	  if (getX > src_width-1) getX = src_width-1;
 	  if (getY > src_height-1) getY = src_height-1;
 	  if (getY < 0) getY = 0;
-	  
+
 
 	  pixel_a[getY][getX]=colorfromB;	  //
     }
   }
-  
+
   engine->ReleaseBitmapSurface(src_a);
   engine->ReleaseBitmapSurface(src_b);
 
@@ -3936,7 +3955,7 @@ const char* ReadVariable(int id)
 	{
 		return engine->CreateScriptString("");
 	}
-	else 
+	else
 	{
 		return engine->CreateScriptString(GameDatavalue[id]);
 	}
@@ -3955,7 +3974,7 @@ void SetGDState(char*value,bool setvalue)
 	{
 		if (Token[i]!=NULL && strcmp(Token[i], value) == 0)
 		{
-			id=i;			
+			id=i;
 			TokenUnUsed[i]=setvalue;
 			i=usedTokens+1;
 		}
@@ -3964,7 +3983,7 @@ void SetGDState(char*value,bool setvalue)
 	{
 		//it doesn't find it while trying to set its state
 		//create the thing with said state
-		id=usedTokens;		
+		id=usedTokens;
 		TokenUnUsed[id]=setvalue;
 		if (Token[id]!=NULL)free(Token[id]);
 		Token[id]=strdup(value);
@@ -3981,12 +4000,12 @@ bool GetGDState(char*value)
 	{
 		if (Token[i]!=NULL && strcmp(Token[i], value) == 0)
 		{
-			id=i;			
-			i=usedTokens+1;			
+			id=i;
+			i=usedTokens+1;
 		}
 	}
 
-	if (id==-1)	
+	if (id==-1)
 	{
 		return true;
 	}
@@ -4002,7 +4021,7 @@ void ResetAllGD()
 	for (int i = 0; i <= usedTokens; i++)
 	{
 		if (Token[i]!=NULL)free(Token[i]);
-		Token[i]=NULL;		
+		Token[i]=NULL;
 		TokenUnUsed[i]=true;
 	}
 	usedTokens=0;
@@ -4016,7 +4035,7 @@ int GameDoOnceOnly(char*value)
 		SetGDState(value,false);
 		return true;
 	}
-	else 
+	else
 	{
 		return false;
 	}
@@ -4035,7 +4054,7 @@ int GameDoOnceOnly(char*value)
 
 
 void DrawScreenEffect(int sprite,int sprite_prev,int ide,int n)
-{	
+{
 	DrawEffect(sprite,sprite_prev,ide,n);
 }
 
@@ -4094,7 +4113,7 @@ int rC(int SFX)
 	//SDL_AudioQuit();
 	//Mix_Quit();
 	//SDL_Quit();
-	
+
 	return 0;
 }
 
@@ -4140,10 +4159,10 @@ void Audio_Resume()
 void AGS_EngineStartup(IAGSEngine *lpEngine)
 {
   engine = lpEngine;
-  
-  if (engine->version < 13) 
+
+  if (engine->version < 13)
     engine->AbortGame("Engine interface is too old, need newer version of AGS.");
-  
+
    StartingValues();
 
   Character_GetX = (SCAPI_CHARACTER_GETX)engine->GetScriptFunctionAddress("Character::get_X");
@@ -4206,7 +4225,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("Baseindex",(void*)&Baseindex);
   engine->RegisterScriptFunction("GetWalkbehindBaserine",(void*)&GetWalkbehindBaserine);
   engine->RegisterScriptFunction("SetWalkbehindBaserine",(void*)&SetWalkbehindBaserine);
-  
+
 
 
 
@@ -4215,10 +4234,10 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
 
   //engine->RegisterScriptFunction("Circle",(void*)&Circle);
 
-	  
 
 
-  
+
+
   //engine->RegisterScriptFunction("",(void*)&);
 
   engine->RequestEventHook(AGSE_PREGUIDRAW);
@@ -4234,8 +4253,8 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
 
 void AGS_EngineInitGfx(const char *driverID, void *data)
 {
-	
-	
+
+
 	//engine->AbortGame("actually loaded it");
 }
 
@@ -4255,7 +4274,7 @@ d3ddev9=NULL;
 d3ddev9 = (IDirect3DDevice9 *)data;
 d3ddev9->GetRenderTarget(0, &_surface);
 d3ddev9->BeginScene();
- 
+
 D3DSURFACE_DESC surfaceDesc;
 D3DLOCKED_RECT lockedRect;
 _surface->LockRect(&lockedRect, 0, 0); // no lock flags specified
@@ -4275,13 +4294,13 @@ int src_height=360;
 int src_depth=32;
 engine->GetBitmapDimensions(grabScreen,&src_width,&src_height,&src_depth);
 
- 
+
 D3DCOLOR* imageData = (D3DCOLOR*)lockedRect.pBits;
 for(int y = 0; y < height; y++)
 {
-	for(int x = 0; x < width; x++) 
-	{	
-		
+	for(int x = 0; x < width; x++)
+	{
+
 		int index = y * lockedRect.Pitch / 4 + x ;
 		D3DCOLOR colr= imageData[index];
 
@@ -4292,31 +4311,31 @@ for(int y = 0; y < height; y++)
 		int ra = colr % 256;
 		colr /= 256;
 
-		
+
 		if (ra<0)ra=0;
 		if (ga<0)ga=0;
 		if (ba<0)ba=0;
-		
+
 		if (ra>255)ra=255;
 		if (ga>255)ga=255;
 		if (ba>255)ba=255;
 		//D3DCOLOR value=((256 + r) * 256 + g) * 256 + b;
-		
+
 		pixel_grabScreen[y][x]=SetColorRGBA(ra,ga,ba,255);
 		//imageData[index] = value;//0xffff0050;//value;//value;
-		
+
 
 	}
 }
 engine->ReleaseBitmapSurface(grabScreen);
 //d3ddev9->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_ANISOTROPIC);
- 
+
 //
  //free(imageData);
-_surface->UnlockRect(); 
+_surface->UnlockRect();
 
 d3ddev9->EndScene();
- 
+
 }*/
 
 void AGS_EngineShutdown()
@@ -4342,7 +4361,7 @@ void AGS_EngineShutdown()
 		}
 		j++;
 	}*/
-    
+
 
 	Mix_Quit();
 	SDL_Quit();
@@ -4354,10 +4373,10 @@ int AGS_EngineOnEvent(int event, int data)
   {
 	 Update();
 	 //DirectDraw(data);
-  }  
+  }
   else if (event == AGSE_RESTOREGAME)
   {
-	int i=0;	
+	int i=0;
 	while (i < GeneralAudio.NumOfChannels)
 	{
 		Mix_HaltChannel(i);
@@ -4371,7 +4390,7 @@ int AGS_EngineOnEvent(int event, int data)
 		engine->FRead(&SFX[j].volume,sizeof(int),data);
 		engine->FRead(&SFX[j].playing,sizeof(int),data);
 
-		
+
 		if (SFX[j].playing==1&& SFX[j].chunk==NULL)
 		{
 			LoadSFX(j);
@@ -4382,9 +4401,9 @@ int AGS_EngineOnEvent(int event, int data)
 			if (SFX[j].repeat!=0)
 			{
 				Mix_VolumeChunk(SFX[j].chunk,SFX[j].volume);
-				Mix_PlayChannel(-1,SFX[j].chunk,0);	
+				Mix_PlayChannel(-1,SFX[j].chunk,0);
 			}
-			else 
+			else
 			{
 				SFX[j].playing=0;
 			}
@@ -4399,7 +4418,7 @@ int AGS_EngineOnEvent(int event, int data)
 	  while (j <300-1)
 	  {
 		  engine->FWrite(&SFX[j].repeat,sizeof(int),data);
-		  engine->FWrite(&SFX[j].volume,sizeof(int),data);		  
+		  engine->FWrite(&SFX[j].volume,sizeof(int),data);
 		  engine->FWrite(&SFX[j].playing,sizeof(int),data);
 		  j++;
 	  }
@@ -4409,14 +4428,14 @@ int AGS_EngineOnEvent(int event, int data)
 
     // Get screen size once here.
     engine->GetScreenDimensions(&screen_width, &screen_height, &screen_color_depth);
-	
+
 	//engine->UnrequestEventHook(AGSE_SAVEGAME);
 	//engine->UnrequestEventHook(AGSE_RESTOREGAME);
-	
+
   }
   else if (event ==AGSE_POSTSCREENDRAW)
   {
-	  
+
   }
   return 0;
 }
@@ -4465,7 +4484,7 @@ const char* scriptHeader =
   "import void SpriteGradient(int sprite,int rate,int toy);\r\n"
   "import void Outline(int sprite,int red,int ged,int bed,int aed);\r\n"
   "import void SaveVariable(String value,int id);\r\n"
-  "import String ReadVariable(int id);\r\n" 
+  "import String ReadVariable(int id);\r\n"
   "import int GameDoOnceOnly(String value);\r\n"
   "import void SetGDState(String value,bool setvalue);\r\n"
   "import bool GetGDState(String value);\r\n"
@@ -4491,11 +4510,11 @@ const char* scriptHeader =
   "import int Baseindex(int i);\r\n"
   "import int GetWalkbehindBaserine(int id);\r\n"
   "import void SetWalkbehindBaserine(int id,int base);\r\n"
-  
 
 
 
-    
+
+
   //"import void Circle(int lightex,int lightey,int spriteX,int sredec,float degstep,float radius);\r\n"
   ;
 //"import ;\r\n"

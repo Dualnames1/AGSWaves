@@ -16,7 +16,14 @@
  * limitations under the License.
  *
  */
+#if defined(LINUX_VERSION)
+//
+#elif defined(MAC_VERSION)
+//
+#else
 #include "stdint.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -81,7 +88,14 @@ static uint32_t gSoundCount;
  * @param new       New Audio to add
  *
  */
-void addMusic(Audio * root, Audio * new);
+// #if defined(LINUX_VERSION)
+static void addMusic(Audio * root, Audio * new);
+// #elif defined(MAC_VERSION)
+// static void addMusic(Audio * root, Audio * new);
+// #else
+// void addMusic(Audio * root, Audio * new);
+// #endif
+
 
 /*
  * Wrapper function for playMusic, playSound, playMusicFromMemory, playSoundFromMemory
@@ -399,7 +413,7 @@ void audioCallback(void * userdata, uint8_t * stream, int len)
     Audio * previous = audio;
     int tempLength;
     uint8_t music = 0;
-	
+
 
     /* Silence the main buffer */
     SDL_memset(stream, 0, len);
@@ -433,9 +447,9 @@ void audioCallback(void * userdata, uint8_t * stream, int len)
             {
                 tempLength = ((uint32_t) len > audio->length) ? audio->length : (uint32_t) len;
             }
-			
+
 			SDL_MixAudioFormat(stream, audio->buffer, AUDIO_FORMAT, tempLength, globalVol);
-			
+
 
             audio->buffer += tempLength;
             audio->length -= tempLength;
@@ -468,20 +482,20 @@ void audioCallback(void * userdata, uint8_t * stream, int len)
 				int CUTOFF=GetFilterFrequency();
 				float SAMPLE_RATE=48000.0;
 				short* samples = (short*)stream;
-				
+
 				short* samplesINPUT = (short*)stream;
-				
-				double RC = 1.0/(CUTOFF*16*3.14); 
-				double dt = 1.0/(SAMPLE_RATE); 
+
+				double RC = 1.0/(CUTOFF*16*3.14);
+				double dt = 1.0/(SAMPLE_RATE);
 				double alpha = dt/(RC+dt);
-				
+
 				double ax[3];
 				double by[3];
 				int d = 0;
 				getLPCoeWAV(SAMPLE_RATE, CUTOFF*12, ax, by);
-				
+
 				while( d < len/2)
-				{					
+				{
 					xv[2] = xv[1];
 					xv[1] = xv[0];
 					xv[0] = samples[d];
@@ -490,10 +504,10 @@ void audioCallback(void * userdata, uint8_t * stream, int len)
 					yv[0] =   (ax[0] * xv[0] + ax[1] * xv[1] + ax[2] * xv[2]
                     - by[1] * yv[0]
                     - by[2] * yv[1]);
-					samples[d] = yv[0]; 
+					samples[d] = yv[0];
 					d++;
 				}
-			   
+
 
 			}
 }
