@@ -2137,10 +2137,10 @@ int IntersectLines(float x1, float y1, float x2, float y2, float x3, float y3, f
 }
 
 float min4(float m1, float m2, float m3, float m4) {
-  return fmin(fmin(m1, m2), fmin(m3, m4));
+  return min(min(m1, m2), min(m3, m4));
 }
 float max4(float m1, float m2, float m3, float m4) {
-  return fmax(fmax(m1, m2), fmax(m3, m4));
+  return max(max(m1, m2), max(m3, m4));
 }
 
 int ReturnWidth(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
@@ -2932,6 +2932,106 @@ void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, b
 }
 
 
+float hasher( float n ) 
+{ 
+	return fracts(sin(n)*153.5453123);
+}
+float noiseField( float tx,float ty,float tz)
+{
+    float px = floor(tx);
+    float fx = fracts(tx);
+    float py = floor(ty);
+    float fy = fracts(ty);
+    float pz = floor(tz);
+    float fz = fracts(tz);
+    fx = fx*fx*(3.0-2.0*fx);
+	fy = fy*fy*(3.0-2.0*fy);
+	fz = fz*fz*(3.0-2.0*fz);
+	
+    float n = px + py*157.0 + 113.0*pz;
+    return lerp(lerp(lerp( hasher(n+  0.0), hasher(n+  1.0),fx),
+                   lerp( hasher(n+157.0), hasher(n+158.0),fx),fy),
+               lerp(lerp( hasher(n+113.0), hasher(n+114.0),fx),
+                   lerp( hasher(n+270.0), hasher(n+271.0),fx),fy),fz);
+}
+
+float b_time[5];
+void DrawForceField(int spriteD, int scale, float speed,int id)
+{
+	if (b_time[id]<1.0) b_time[id]=1.0;
+	b_time[id]+=speed;
+	BITMAP* src = engine->GetSpriteGraphic(spriteD);
+	
+	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
+	
+	int src_width=640;
+	int src_height=360;
+	int src_depth=32;
+
+	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+	
+
+    int x,y;
+	for (y = 0; y < src_height; y++)
+	{
+		for (x = 0; x < src_width; x++)
+		{
+			int setY=y;
+			if (setY<0) setY=0;
+			int setX=x;
+			if (setX<0) setX=0;
+			
+			float uvx=float(x)/float(scale);
+			float uvy=float(y)/float(scale);
+
+			float jx=uvx;
+			float jy=uvy+b_time[id]*3.14;
+			float jz=sin(b_time[id]);
+			float jyy=uvy+b_time[id];
+			float jzz=cos(b_time[id]+3.0);
+
+			float af = abs(noiseField(jx,jy,jz)-noiseField(jx,jyy,jzz));
+			float newR=0.5-pow(af, float(0.2))/2.0;
+			float newG=0.0;
+			float newB=0.4-pow(af, float(0.4));
+
+			int Rd=int(newR*255.0);
+			int Gd=int(newG*255.0);
+			int Bd=int(newB*255.0);
+			int na=int(1.0*255.0);//pixelb[setY][setX];//int(1.0*255.0);
+
+			int highest=0;
+			if (Rd > Gd)
+			{
+				if (Rd > Bd) highest=Rd;
+				else highest=Bd;
+			}
+			else 
+			{
+				if (Gd > Bd) highest=Gd;
+				else highest=Bd;
+			}
+
+			int grabA=getAcolor(pixelb[setY][setX]);
+
+			if (highest <= 40)
+			{
+				na=int( (float(highest*2)/100.0)*255.0);
+			}
+			else 
+			{
+				na=grabA;
+			}
+			pixelb[setY][setX]= SetColorRGBA(Rd,Gd,Bd,na);//
+			
+			
+		}
+	}
+    
+
+	engine->ReleaseBitmapSurface(src);
+
+}
 
 
 
@@ -4192,6 +4292,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("DrawBlur",(void*)&DrawBlur);
   engine->RegisterScriptFunction("SetColorShade",(void*)&SetColorShade);
   engine->RegisterScriptFunction("DrawCloud",(void*)&DrawCloud);
+  engine->RegisterScriptFunction("DrawForceField",(void*)&DrawForceField);
   engine->RegisterScriptFunction("DrawLightning",(void*)&DrawLightning);
   engine->RegisterScriptFunction("Grayscale",(void*)&Grayscale);
   engine->RegisterScriptFunction("ReadWalkBehindIntoSprite",(void*)&ReadWalkBehindIntoSprite);
@@ -4477,6 +4578,7 @@ const char* scriptHeader =
   "import void DrawBlur(int spriteD,int radius);\r\n"
   "import void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id);\r\n"
   "import void DrawCloud(int spriteD, int scale, float speed);\r\n"
+  "import void DrawForceField(int spriteD, int scale, float speed,int id);\r\n"
   "import void SetColorShade(int Rn,int Gn,int Bn, int idn);\r\n"
   "import void Grayscale(int sprite);\r\n"
   "import void ReadWalkBehindIntoSprite(int sprite,int bgsprite,int walkbehindBaseline);\r\n"
