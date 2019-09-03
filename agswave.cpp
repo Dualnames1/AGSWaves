@@ -2112,6 +2112,83 @@ void Blend(int graphic, int refgraphic, bool screen)
 
 
 
+void Dissolve(int graphic, int noisegraphic, int disvalue)
+{
+  BITMAP* src = engine->GetSpriteGraphic(graphic);
+  int src_width=640;
+  int src_height=360;
+  int src_depth=32;
+  engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+  unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
+
+
+  BITMAP* noisesrc = engine->GetSpriteGraphic(noisegraphic);
+  int noisesrc_width=640;
+  int noisesrc_height=360;
+  int noisesrc_depth=32;
+  engine->GetBitmapDimensions(noisesrc,&noisesrc_width,&noisesrc_height,&noisesrc_depth);
+  unsigned int** noise_pixels = (unsigned int**)engine->GetRawBitmapSurface(noisesrc);
+  engine->ReleaseBitmapSurface(noisesrc);
+
+  int x, y;
+
+
+  for (y = 0; y < src_height; y++)
+  {
+    for (x = 0; x < src_width; x++)//
+	{
+		int getColor=noise_pixels[y][x];
+		int gn=getRcolor(getColor);
+
+		
+		int getColorx=sprite_pixels[y][x];
+		int rj=getRcolor(getColorx);
+		int gj=getGcolor(getColorx);
+		int bj=getBcolor(getColorx);
+		int originalA=getAcolor(getColorx);
+		int aj=0;
+
+		//disvalue 0-255
+		//FOR EACH PIXEL IN THE NOISE GRAPHIC THAT IS < DISVALUE
+		if (gn < disvalue) 
+		{
+			if (gn > disvalue-2)
+			{
+				rj=193+Random(20);
+				gj=132+Random(20);
+				bj=255+Random(20);
+				aj=originalA;
+			}
+			else if (gn > disvalue-3)
+			{
+				rj=128+Random(20);
+				gj=0+Random(20);
+				bj=255+Random(20);
+				aj=150;
+			}
+			else 
+			{
+				aj=0;
+			}
+		}
+		else aj=originalA;
+
+		//if (originalA 
+
+
+        if (originalA>50)
+		{
+			sprite_pixels[y][x]=SetColorRGBA(rj,gj,bj,aj);
+		}
+		
+	}
+  }
+  engine->ReleaseBitmapSurface(src);
+
+
+}
+
+
 //WARP CODE
 
 float ix, iy, ua;
@@ -4318,6 +4395,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("RainUpdate",(void*)&RainUpdate);
   engine->RegisterScriptFunction("BlendTwoSprites",(void*)&BlendTwoSprites);
   engine->RegisterScriptFunction("Blend",(void*)&Blend);
+  engine->RegisterScriptFunction("Dissolve",(void*)&Dissolve);
   engine->RegisterScriptFunction("TintProper",(void*)&TintProper);
   engine->RegisterScriptFunction("CalculateThings",(void*)&CalculateThings);
   engine->RegisterScriptFunction("Objindex",(void*)&Objindex);
@@ -4604,6 +4682,7 @@ const char* scriptHeader =
   "import void Warper(int swarp,int sadjust,int x1, int y1, int x2);\r\n"
   "import void BlendTwoSprites(int graphic, int refgraphic);\r\n"
   "import void Blend(int graphic, int refgraphic, bool screen);\r\n"
+  "import void Dissolve(int graphic, int noisegraphic, int disvalue);\r\n"
   "import void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int blx);\r\n"
   "import int CalculateThings(bool clap,int ids);\r\n"
   "import int Objindex(int i);\r\n"
