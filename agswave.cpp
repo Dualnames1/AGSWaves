@@ -79,7 +79,7 @@ struct Soundeffect
 	int allow;
 	//int position;
 };
-Soundeffect SFX[300];
+Soundeffect SFX[500];
 
 struct Aud
 {
@@ -571,7 +571,7 @@ void SDLMain()
 			   j++;
 		   }
 		   int i=0;
-		   while (i<300-1)
+		   while (i<500-1)
 		   {
 			   SFX[i].repeat=0;
 			   SFX[i].playing=0;
@@ -930,7 +930,7 @@ void Update()
 	}
 
 	int j=0;
-	while (j < 300-1)
+	while (j < 500-1)
 	{
 
 		int i=0;
@@ -4563,7 +4563,7 @@ int AGS_EngineOnEvent(int event, int data)
 	}
 
 	int j=0;
-	while (j <300-1)
+	while (j <500-1)
 	{
 		engine->FRead(&SFX[j].repeat,sizeof(int),data);
 		engine->FRead(&SFX[j].volume,sizeof(int),data);
@@ -4594,7 +4594,7 @@ int AGS_EngineOnEvent(int event, int data)
   else if (event == AGSE_SAVEGAME)
   {
 	  int j=0;
-	  while (j <300-1)
+	  while (j <500-1)
 	  {
 		  engine->FWrite(&SFX[j].repeat,sizeof(int),data);
 		  engine->FWrite(&SFX[j].volume,sizeof(int),data);
