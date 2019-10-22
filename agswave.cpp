@@ -2110,7 +2110,94 @@ void Blend(int graphic, int refgraphic, bool screen)
 
 }
 
+void ReverseTransparency(int graphic)
+{
+  BITMAP* noisesrc = engine->GetSpriteGraphic(graphic);
+  int noisesrc_width=640;
+  int noisesrc_height=360;
+  int noisesrc_depth=32;
+  engine->GetBitmapDimensions(noisesrc,&noisesrc_width,&noisesrc_height,&noisesrc_depth);
+  unsigned int** noise_pixels = (unsigned int**)engine->GetRawBitmapSurface(noisesrc);
+  engine->ReleaseBitmapSurface(noisesrc);
 
+
+  BITMAP* src = engine->GetSpriteGraphic(graphic);
+  int src_width=640;
+  int src_height=360;
+  int src_depth=32;
+  engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+  unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
+
+
+  int x, y;
+
+
+  for (y = 0; y < src_height; y++)
+  {
+    for (x = 0; x < src_width; x++)//
+	{
+		int getColors=noise_pixels[y][x];
+		int redClr=getRcolor(getColors);
+		int greenClr=getGcolor(getColors);
+		int blueClr=getBcolor(getColors);
+		int TranClr=getAcolor(getColors);
+
+
+
+	    if (TranClr < 254) 
+		{
+			//PIXEL IS TRANSPARENT
+			sprite_pixels[y][x]=SetColorRGBA(255,255,255,255);
+		}
+		else 
+		{
+			//PIXEL IS VISIBLE
+			sprite_pixels[y][x]=SetColorRGBA(0,0,0,0);
+		}
+
+		//disvalue 0-255
+		//FOR EACH PIXEL IN THE NOISE GRAPHIC THAT IS < DISVALUE
+		//sprite_pixels[y][x]=SetColorRGBA(redClr,greenClr,blueClr,TranClr);		
+		
+	}
+  }
+  engine->ReleaseBitmapSurface(src);
+
+
+}
+
+
+void NoiseCreator(int graphic)
+{
+  BITMAP* src = engine->GetSpriteGraphic(graphic);
+  int src_width=640;
+  int src_height=360;
+  int src_depth=32;
+  engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+  unsigned int** sprite_pixels = (unsigned int**)engine->GetRawBitmapSurface(src);
+
+
+  int x, y;
+
+
+  for (y = 0; y < src_height; y++)
+  {
+    for (x = 0; x < src_width; x++)//
+	{
+		int getColor=sprite_pixels[y][x];
+		int r=rand()%255;
+		int g=rand()%255;
+		int b=rand()%255;
+		int a=getAcolor(getColor);
+
+	    sprite_pixels[y][x]=SetColorRGBA(r,g,b,a);	
+		
+	}
+  }
+  engine->ReleaseBitmapSurface(src);
+
+
+}
 
 void Dissolve(int graphic, int noisegraphic, int disvalue)
 {
@@ -4396,6 +4483,8 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("BlendTwoSprites",(void*)&BlendTwoSprites);
   engine->RegisterScriptFunction("Blend",(void*)&Blend);
   engine->RegisterScriptFunction("Dissolve",(void*)&Dissolve);
+  engine->RegisterScriptFunction("ReverseTransparency",(void*)&ReverseTransparency);
+  engine->RegisterScriptFunction("NoiseCreator",(void*)&NoiseCreator);
   engine->RegisterScriptFunction("TintProper",(void*)&TintProper);
   engine->RegisterScriptFunction("CalculateThings",(void*)&CalculateThings);
   engine->RegisterScriptFunction("Objindex",(void*)&Objindex);
@@ -4683,6 +4772,8 @@ const char* scriptHeader =
   "import void BlendTwoSprites(int graphic, int refgraphic);\r\n"
   "import void Blend(int graphic, int refgraphic, bool screen);\r\n"
   "import void Dissolve(int graphic, int noisegraphic, int disvalue);\r\n"
+  "import void ReverseTransparency(int graphic);\r\n"
+  "import void NoiseCreator(int graphic);\r\n"
   "import void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int blx);\r\n"
   "import int CalculateThings(bool clap,int ids);\r\n"
   "import int Objindex(int i);\r\n"
