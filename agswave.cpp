@@ -67,7 +67,7 @@ IAGSEngine* engine;
 // Imported script functions
 
 
-Mix_Music *musiceffect[40];//1 music channel
+Mix_Music *musiceffect[60];//1 music channel
 
 //WAVE SOUNDS FILES
 struct Soundeffect
@@ -563,7 +563,7 @@ void SDLMain()
 		   GeneralAudio.NumOfChannels=60;
 		   Mix_AllocateChannels(GeneralAudio.NumOfChannels);
 		   int j=0;
-		   while (j < 40)//40)
+		   while (j < 60)//40)
 		   {
 			 	 char musicPath[1024];
 				 GetMusicPath(musicPath,j);
