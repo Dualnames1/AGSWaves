@@ -4086,7 +4086,6 @@ void SpriteSkew(int sprite,float xskewmin, float yskewmin,float xskewmax, float 
 }
 
 
-
 void DrawEffect(int sprite_a,int sprite_b,int id,int n)
 {
   int x, y;
