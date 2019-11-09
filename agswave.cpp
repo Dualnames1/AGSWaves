@@ -2167,7 +2167,7 @@ void ReverseTransparency(int graphic)
 }
 
 
-void NoiseCreator(int graphic)
+void NoiseCreator(int graphic, int setA)
 {
   BITMAP* src = engine->GetSpriteGraphic(graphic);
   int src_width=640;
@@ -2188,7 +2188,7 @@ void NoiseCreator(int graphic)
 		int r=rand()%255;
 		int g=rand()%255;
 		int b=rand()%255;
-		int a=getAcolor(getColor);
+		int a=setA;
 
 	    sprite_pixels[y][x]=SetColorRGBA(r,g,b,a);	
 		
@@ -4772,7 +4772,7 @@ const char* scriptHeader =
   "import void Blend(int graphic, int refgraphic, bool screen);\r\n"
   "import void Dissolve(int graphic, int noisegraphic, int disvalue);\r\n"
   "import void ReverseTransparency(int graphic);\r\n"
-  "import void NoiseCreator(int graphic);\r\n"
+  "import void NoiseCreator(int graphic, int setA);\r\n"
   "import void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int blx);\r\n"
   "import int CalculateThings(bool clap,int ids);\r\n"
   "import int Objindex(int i);\r\n"
