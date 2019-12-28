@@ -504,7 +504,7 @@ void SetAudioDriver(const char*name)
 
 void SDLMain()
 {
-	//engine->DisableSound();
+	engine->DisableSound();
 
     //SDL_Init(SDL_INIT_AUDIO);
     //OPEN DEVICE
@@ -580,6 +580,7 @@ void SDLMain()
 			   //SFX[i].position=0;
 			   i++;
 		   }
+		   initAudio();
 	   }
 	   //SDL_setenv("SDL_DISKAUDIODELAY", "0" , 1);
 
@@ -609,6 +610,25 @@ void SFXAllowOverlap(int SoundToAllow,int allow)
 {
 	SFX[SoundToAllow].allow=allow;
 }
+
+void PlaySFXNoLowPass(int i,int volume)
+{
+	if (GeneralAudio.Disabled)
+	{
+		return;
+	}
+	
+	char soundPath[1024];
+	GetSoundPath(soundPath,i);
+	
+	playSound(soundPath,volume);
+    //SDL_Delay(1000);
+
+    /* Pause audio test */
+    //pauseAudio();
+
+}
+//playSound("sounds/door1.wav", SDL_MIX_MAXVOLUME / 2);
 
 void PlaySFX(int SoundToPlay, int repeat)
 {
@@ -2165,6 +2185,8 @@ void ReverseTransparency(int graphic)
 
 
 }
+
+
 
 
 void NoiseCreator(int graphic, int setA)
@@ -4332,6 +4354,10 @@ void SFX_Play(int SFX, int repeat)
 {
 	PlaySFX(SFX,repeat);
 }
+void SFX_PlayNLP(int SFX,int volume)
+{
+	PlaySFXNoLowPass(SFX, volume);
+}
 void SFX_Stop(int SFX,int fademsOUT)
 {
 	SFXStop(SFX,fademsOUT);
@@ -4435,6 +4461,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   SDLMain();
   engine->RegisterScriptFunction("DrawScreenEffect", (void*)&DrawScreenEffect);
   engine->RegisterScriptFunction("SFX_Play",(void*)&SFX_Play);
+  engine->RegisterScriptFunction("SFX_PlayNLP",(void*)&SFX_PlayNLP);
   engine->RegisterScriptFunction("SFX_SetVolume",(void*)&SFX_SetVolume);
   engine->RegisterScriptFunction("SFX_GetVolume",(void*)&SFX_GetVolume);
   engine->RegisterScriptFunction("Music_Play",(void*)&Music_Play);
@@ -4724,6 +4751,7 @@ const char* scriptHeader =
   "import void DrawScreenEffect(int sprite,int sprite_prev,int ide,int n);\r\n"
   "import void PlaySounds();\r\n"
   "import void SFX_Play(int SFX, int repeat);\r\n"
+  "import void SFX_PlayNLP(int SFX,int volume);\r\n"
   "import void SFX_SetVolume(int SFX,int volume);\r\n"
   "import int SFX_GetVolume(int SFX);\r\n"
   "import void Music_Play(int MFX, int repeat,int fadeinMS,int fadeoutMS,int Position);\r\n"
@@ -4771,7 +4799,7 @@ const char* scriptHeader =
   "import void BlendTwoSprites(int graphic, int refgraphic);\r\n"
   "import void Blend(int graphic, int refgraphic, bool screen);\r\n"
   "import void Dissolve(int graphic, int noisegraphic, int disvalue);\r\n"
-  "import void ReverseTransparency(int graphic);\r\n"
+  "import void ReverseTransparency(int graphic);\r\n"  
   "import void NoiseCreator(int graphic, int setA);\r\n"
   "import void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int blx);\r\n"
   "import int CalculateThings(bool clap,int ids);\r\n"

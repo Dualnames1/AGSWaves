@@ -44,15 +44,14 @@
 #define AUDIO_FORMAT AUDIO_S16LSB
 
 /* Frequency of the file */
-#define AUDIO_FREQUENCY 48000
+#define AUDIO_FREQUENCY 44100
 
 /* 1 mono, 2 stereo, 4 quad, 6 (5.1) */
 #define AUDIO_CHANNELS 2
 
 /* Specifies a unit of audio data to be used at a time. Must be a power of 2 */
 #define AUDIO_SAMPLES 4096
-
-
+#define AUDIO_MAX_SOUNDS 25
 
 /* Flags OR'd together, which specify how SDL should behave when a device cannot offer a specific feature
  * If flag is set, SDL will change the format in the actual audio file structure (as opposed to gDevice->want)
@@ -126,7 +125,10 @@ void addAudio(Audio * root, Audio * new);
  *
  */
 void audioCallback(void * userdata, uint8_t * stream, int len);
-
+void playSound(const char * filename, int volume)
+{
+    playAudio(filename, NULL, 0, volume);
+}
 void playMusic(const char * filename, int volume, int repeat)
 {
 	if (repeat==-1) repeat=1;
@@ -291,6 +293,18 @@ void playAudio(const char * filename, Audio * audio, uint8_t loop, int volume)
         return;
     }
 
+	if(loop == 0)
+    {
+        if(gSoundCount >= AUDIO_MAX_SOUNDS)
+        {
+            return;
+        }
+        else
+        {
+            gSoundCount++;
+        }
+    }
+
 
     /* Load from filename or from Memory */
     if(filename != NULL)
@@ -448,7 +462,7 @@ void audioCallback(void * userdata, uint8_t * stream, int len)
                 tempLength = ((uint32_t) len > audio->length) ? audio->length : (uint32_t) len;
             }
 
-			SDL_MixAudioFormat(stream, audio->buffer, AUDIO_FORMAT, tempLength, globalVol);
+			SDL_MixAudioFormat(stream, audio->buffer, AUDIO_FORMAT, tempLength, audio->volume);
 
 
             audio->buffer += tempLength;
@@ -477,6 +491,7 @@ void audioCallback(void * userdata, uint8_t * stream, int len)
             audio = previous->next;
         }
     }
+	/*
 	if (GetFilterFrequency()!= -1)
 			{
 				int CUTOFF=GetFilterFrequency();
@@ -509,7 +524,7 @@ void audioCallback(void * userdata, uint8_t * stream, int len)
 				}
 
 
-			}
+			}*/
 }
 
 void addAudio(Audio * root, Audio * new)
