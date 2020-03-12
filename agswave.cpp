@@ -1691,11 +1691,11 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 
 int cid=0;
 
-void CreateRainParticleMid(int x, int y, int fx, int fy)
+void CreateRainParticleMid(int x, int y, int fx, int fy, int maxpart)
 {
   int s=0;
 
-  while (s <400)
+  while (s <maxpart)
   {
     if (!RainParticles[s].active)
     {
@@ -1715,11 +1715,11 @@ void CreateRainParticleMid(int x, int y, int fx, int fy)
 }
 
 
-void CreateRainParticleFore(int x, int y, int fx, int fy)
+void CreateRainParticleFore(int x, int y, int fx, int fy, int maxpart)
 {
   int s=0;
 
-  while (s <40)
+  while (s <maxpart)
   {
     if (!RainParticlesFore[s].active)
     {
@@ -1738,11 +1738,11 @@ void CreateRainParticleFore(int x, int y, int fx, int fy)
   }
 }
 
-void CreateRainParticleBack(int x, int y, int fx, int fy)
+void CreateRainParticleBack(int x, int y, int fx, int fy, int maxpart)
 {
   int s=0;
 
-  while (s <800)
+  while (s <maxpart)
   {
     if (!RainParticlesBack[s].active)
     {
@@ -2531,7 +2531,7 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
 
 
 
-void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
+void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic, float perc)
 {
   bool drawBack=true;
   bool drawMid=true;
@@ -2541,12 +2541,12 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic)
   int cdelay=0;
   while (cdelay <rdensity)
   {
-    if (drawMid) CreateRainParticleMid(Random(640*4)-640, -(20+Random(50)), FX, FY);
-    if (drawFore) CreateRainParticleFore(Random(640*4)-640, -(20+Random(50)), FX, FY);
+    if (drawMid) CreateRainParticleMid(Random(640*4)-640, -(20+Random(50)), FX, FY,int( (400.0*perc)/100.0));
+    if (drawFore) CreateRainParticleFore(Random(640*4)-640, -(20+Random(50)), FX, FY,int( (40.0*perc)/100.0));
     if (drawBack)
 	{
-		CreateRainParticleBack(Random(640*4)-640, -(20+Random(50)), FX, FY);
-		CreateRainParticleBack(Random(640*4)-640, -(20+Random(50)), FX, FY);
+		CreateRainParticleBack(Random(640*4)-640, -(20+Random(50)), FX, FY,int( (800.0*perc)/100.0));
+		CreateRainParticleBack(Random(640*4)-640, -(20+Random(50)), FX, FY,int( (800.0*perc)/100.0));
 	}
     cdelay++;
   }
@@ -4789,7 +4789,7 @@ const char* scriptHeader =
   "import void FireUpdate(int getDynamicSprite, bool Fire2Visible);\r\n"
   "import void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite);\r\n"
   "import void SetWindValues(int w,int h,int pr,int prev);\r\n"
-  "import void RainUpdate(int rdensity, int FX, int FY,int RW,int RH,int graphic);\r\n"
+  "import void RainUpdate(int rdensity, int FX, int FY,int RW,int RH,int graphic, float perc);\r\n"
   "import int ReturnWidth(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);\r\n"
   "import int ReturnHeight(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4);\r\n"
   "import int ReturnNewHeight();\r\n"
