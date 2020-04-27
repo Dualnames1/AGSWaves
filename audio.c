@@ -386,10 +386,7 @@ void audioSetGlobalVolume(int volume)
 	globalVol=volume;
 }
 
-int audioGetGlobalVolume()
-{
-	return globalVol;
-}
+
 
 int FilterF;
 double xv[3];

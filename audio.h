@@ -129,7 +129,6 @@ void unpauseAudio(void);
 
 void audioSetGlobalVolume(int volume);
 
-int audioGetGlobalVolume();
 
 int GetFilterFrequency();
 
