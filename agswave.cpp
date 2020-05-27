@@ -2115,18 +2115,18 @@ void BlendTwoSprites(int graphic, int refgraphic)
 }
 
 
-int BlendColor (int Ln,int Bn)
+int BlendColor (int Ln,int Bn, int perc)
 {
-	return ((Ln < 128) ? (2 * Bn * Ln/ 255):(255 - 2 * (255 - Bn) * (255 - Ln) / 255));
+	return ((Ln < 128) ? (2 * Bn * Ln/ perc):(perc - 2 * (perc - Bn) * (perc - Ln) / perc));
 }
 
-int BlendColorScreen(int Ln,int Bn)
+int BlendColorScreen(int Ln,int Bn, int perc)
 {
-	return (255 - (((255 - Bn) * (255 - Ln)) >> 8));
+	return (perc - (((perc - Bn) * (perc - Ln)) >> 8));
 }
 
 
-void Blend(int graphic, int refgraphic, bool screen)
+void Blend(int graphic, int refgraphic, bool screen,int perc)
 {
   BITMAP* src = engine->GetSpriteGraphic(graphic);
   int src_width=640;
@@ -2170,17 +2170,17 @@ void Blend(int graphic, int refgraphic, bool screen)
 
 			if (!screen)
 			{
-				rj=BlendColor(rn,rj);
-				gj=BlendColor(gn,gj);
-				bj=BlendColor(bn,bj);
-				aj=BlendColor(an,aj);
+				rj=BlendColor(rn,rj, perc);
+				gj=BlendColor(gn,gj, perc);
+				bj=BlendColor(bn,bj, perc);
+				aj=BlendColor(an,aj, perc);
 			}
 			else
 			{
-				rj=BlendColorScreen(rn,rj);
-				gj=BlendColorScreen(gn,gj);
-				bj=BlendColorScreen(bn,bj);
-				aj=BlendColorScreen(an,aj);
+				rj=BlendColorScreen(rn,rj, perc);
+				gj=BlendColorScreen(gn,gj, perc);
+				bj=BlendColorScreen(bn,bj, perc);
+				aj=BlendColorScreen(an,aj, perc);
 			}
 
 
@@ -4863,7 +4863,7 @@ const char* scriptHeader =
   "import void SetWarper(int y2x,int x3x,int y3x,int x4x,int y4x);\r\n"
   "import void Warper(int swarp,int sadjust,int x1, int y1, int x2);\r\n"
   "import void BlendTwoSprites(int graphic, int refgraphic);\r\n"
-  "import void Blend(int graphic, int refgraphic, bool screen);\r\n"
+  "import void Blend(int graphic, int refgraphic, bool screen,int perc);\r\n"
   "import void Dissolve(int graphic, int noisegraphic, int disvalue);\r\n"
   "import void ReverseTransparency(int graphic);\r\n"  
   "import void NoiseCreator(int graphic, int setA);\r\n"
