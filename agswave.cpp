@@ -67,14 +67,14 @@ IAGSEngine* engine;
 // Imported script functions
 
 
-Mix_Music *musiceffect[60];//1 music channel
+Mix_Music *musiceffect[80];//1 music channel
 
 
 struct getMus
 {
 	char musicPath[1024];
 };
-getMus MusicLoads[60];
+getMus MusicLoads[80];
 
 
 
@@ -86,6 +86,8 @@ struct Soundeffect
 	int volume;
 	int playing;
 	int allow;
+	int channel;
+	int filter;
 	//int position;
 };
 Soundeffect SFX[500];
@@ -565,7 +567,19 @@ void ApplyFilter(int SetFrequency)
 	GeneralAudio.FilterFrequency=SetFrequency;
 	SetFilterFrequency(SetFrequency);
 	//Mix_HookMusic(OGGAudioCallback,NULL);
-	Mix_RegisterEffect(MIX_CHANNEL_POST, LPEffect, NULL, NULL);//MIX_CHANNEL_POST
+
+
+	int i=0;
+	while (i < 500)
+	{
+		if (SFX[i].playing && SFX[i].filter==1)
+		{
+			Mix_RegisterEffect(SFX[i].channel, LPEffect, NULL, NULL);
+		}
+		i++;
+	}
+
+	//Mix_RegisterEffect(MIX_CHANNEL_POST, LPEffect, NULL, NULL);//MIX_CHANNEL_POST
 
 }
 
@@ -573,7 +587,14 @@ void RemoveFilter()
 {
 	SetFilterFrequency(-1);
 	OGG_Filter=false;
-	Mix_UnregisterAllEffects(MIX_CHANNEL_POST);
+	int i=0;
+	while (i < GeneralAudio.NumOfChannels)
+	{
+		Mix_UnregisterAllEffects(i);
+		i++;
+	}
+
+	//Mix_UnregisterAllEffects(MIX_CHANNEL_POST);
 }
 
 
@@ -662,6 +683,7 @@ void SDLMain()
 			   SFX[i].playing=0;
 			   SFX[i].volume=128;
 			   SFX[i].allow=0;
+			   SFX[i].filter=1;
 			   //SFX[i].position=0;
 			   i++;
 		   }
@@ -689,6 +711,11 @@ int SFXGetVolume(int SoundToAdjust)
 		return 0;
 	}
 	return Mix_VolumeChunk(SFX[SoundToAdjust].chunk,-1);
+}
+
+void SFXFilter(int SoundToFilter,int enable)
+{
+	SFX[SoundToFilter].filter=enable;
 }
 
 void SFXAllowOverlap(int SoundToAllow,int allow)
@@ -751,10 +778,16 @@ void PlaySFX(int SoundToPlay, int repeat)
 
 		Mix_VolumeChunk(SFX[SoundToPlay].chunk,SFX[SoundToPlay].volume);
 		int grabChan=Mix_PlayChannel(-1,SFX[SoundToPlay].chunk,0);	//-1
+		SFX[SoundToPlay].channel=grabChan;
 		Mix_Volume(grabChan,GeneralAudio.SoundValue);
-		//Mix_UnregisterAllEffects(grabChan);
-		//Mix_RegisterEffect(grabChan, freqEffect, NULL, NULL);//MIX_CHANNEL_POST
-		//Mix_UnregisterAllEffects(grabChan);
+		Mix_UnregisterAllEffects(grabChan);
+
+		if (OGG_Filter && SFX[SoundToPlay].filter)
+		{
+			Mix_RegisterEffect(grabChan, LPEffect, NULL, NULL);
+		}
+
+
 		SFX[SoundToPlay].repeat=repeat;
 		SFX[SoundToPlay].playing=1;
 		//SFX[SoundToPlay].position=0;
@@ -1023,7 +1056,7 @@ void Update()
 		{
 			Mix_Volume(i,GeneralAudio.SoundValue);
 			if (Mix_Playing(i) && Mix_GetChunk(i)!=NULL && Mix_GetChunk(i)==SFX[j].chunk)
-			{
+			{				
 				id=i;
 		    }
 			i++;
@@ -1050,7 +1083,9 @@ void Update()
 				SFXSetVolume(j,SFX[j].volume);
 				int grabChan=Mix_PlayChannel(-1,SFX[j].chunk,0);
 				Mix_Volume(grabChan,GeneralAudio.SoundValue);
-				//Mix_UnregisterAllEffects(grabChan);
+				Mix_UnregisterAllEffects(grabChan);
+				if (SFX[j].filter==1)Mix_RegisterEffect(grabChan, LPEffect, NULL, NULL);
+				
 				//Mix_RegisterEffect(grabChan, freqEffect, NULL, NULL);//MIX_CHANNEL_POST
 				SFX[j].playing=1;
 			}
@@ -2122,7 +2157,9 @@ int BlendColor (int Ln,int Bn, int perc)
 
 int BlendColorScreen(int Ln,int Bn, int perc)
 {
-	return (perc - (((perc - Bn) * (perc - Ln)) >> 8));
+	
+	//(255 - (((255 - B) * (255 - L)) >> 8)))
+	return (Bn == perc) ? Bn:min(perc, (Ln * Ln / (perc - Bn)));
 }
 
 
@@ -4444,6 +4481,10 @@ void SFX_AllowOverlap(int SFX,int allow)
 {
 	SFXAllowOverlap(SFX,allow);
 }
+void SFX_Filter(int SFX,int enable)
+{
+	SFXFilter(SFX,enable);
+}
 
 
 void Music_SetVolume(int volume)
@@ -4534,6 +4575,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("Audio_Apply_Filter",(void*)&Audio_Apply_Filter);
   engine->RegisterScriptFunction("Audio_Remove_Filter",(void*)&Audio_Remove_Filter);
   engine->RegisterScriptFunction("SFX_AllowOverlap",(void*)&SFX_AllowOverlap);
+  engine->RegisterScriptFunction("SFX_Filter",(void*)&SFX_Filter);
   engine->RegisterScriptFunction("DrawBlur",(void*)&DrawBlur);
   engine->RegisterScriptFunction("SetColorShade",(void*)&SetColorShade);
   engine->RegisterScriptFunction("DrawCloud",(void*)&DrawCloud);
@@ -4597,7 +4639,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
 
   
   int j=0;
-  while (j < 60)
+  while (j < 80)
   {
 	  GetMusicPath(MusicLoads[j].musicPath,j);
 	  char musicPath[1024];
@@ -4833,6 +4875,7 @@ const char* scriptHeader =
   "import void Audio_Apply_Filter(int Frequency);\r\n"
   "import void Audio_Remove_Filter();\r\n"
   "import void SFX_AllowOverlap(int SFX,int allow);\r\n"
+  "import void SFX_Filter(int SFX,int enable);\r\n"
   "import void Audio_Pause();\r\n"
   "import void Audio_Resume();\r\n"
   "import void DrawBlur(int spriteD,int radius);\r\n"
