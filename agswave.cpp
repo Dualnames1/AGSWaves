@@ -329,9 +329,9 @@ void OGGAudioCallbackZero(void* userData, Uint8* stream, int len)
 	for(int i = 0; i < (len/2); i++)
     {
 		samples[i] = (samplesINPUT[i]*globalStream[getMID].volume)/100;
-	   if (pf<4096 && globalStream[getMID].repeat==1)
+	   if (pf<=0 && globalStream[getMID].repeat==1)
 	   {
-		   stb_vorbis_seek(globalStream[getMID].Vorbis,4096);
+		   stb_vorbis_seek(globalStream[getMID].Vorbis,0);
 		   pf=stb_vorbis_get_samples_short_interleaved(globalStream[getMID].Vorbis, 2, samples, len/sizeof(short));
 		   i=0;
 		   continue;
@@ -403,9 +403,9 @@ void OGGAudioCallbackOne(void* userData, Uint8* stream, int len)
 	for(int i = 0; i < (len/2); i++)
     {
 		samples[i] = (samplesINPUT[i]*globalStream[getMID].volume)/100;
-	   if (pf<4096 && globalStream[getMID].repeat==1)
+	   if (pf<=0 && globalStream[getMID].repeat==1)
 	   {
-		   stb_vorbis_seek(globalStream[getMID].Vorbis,4096);
+		   stb_vorbis_seek(globalStream[getMID].Vorbis,0);
 		   pf=stb_vorbis_get_samples_short_interleaved(globalStream[getMID].Vorbis, 2, samples, len/sizeof(short));
 		   i=0;
 		   continue;
@@ -684,6 +684,7 @@ void SDLMain()
 			   SFX[i].volume=128;
 			   SFX[i].allow=0;
 			   SFX[i].filter=1;
+			   SFX[i].channel=-2;
 			   //SFX[i].position=0;
 			   i++;
 		   }
@@ -874,6 +875,7 @@ void SFXStop(int SoundToStop,int fadems)
 		{
 			SFX[SoundToStop].playing=0;
 			SFX[SoundToStop].repeat=0;
+			SFX[SoundToStop].channel=-2;
 			//SFX[SoundToStop].position=0;
 			Mix_FadeOutChannel(i, fadems);
 		}
@@ -1077,22 +1079,31 @@ void Update()
 			//IF REPEAT PLAY SOUND
 			if (SFX[j].repeat!=0)
 			{
+				//engine->AbortGame("repeated");
 				//REDUCE REPEAT BY 1
 				if (SFX[j].repeat>0) SFX[j].repeat-=1;
 				//SFX[j].position=0;
 				SFXSetVolume(j,SFX[j].volume);
-				int grabChan=Mix_PlayChannel(-1,SFX[j].chunk,0);
+				int grabChan=SFX[j].channel;
+			    Mix_PlayChannel(grabChan,SFX[j].chunk,0);
 				Mix_Volume(grabChan,GeneralAudio.SoundValue);
 				Mix_UnregisterAllEffects(grabChan);
-				if (SFX[j].filter==1)Mix_RegisterEffect(grabChan, LPEffect, NULL, NULL);
+				if (SFX[j].filter==1 && OGG_Filter)
+				{
+					Mix_RegisterEffect(grabChan, LPEffect, NULL, NULL);
+				}
 				
 				//Mix_RegisterEffect(grabChan, freqEffect, NULL, NULL);//MIX_CHANNEL_POST
 				SFX[j].playing=1;
 			}
-			else SFX[j].playing=0;
+			else 
+			{
+				SFX[j].channel=-2;
+				SFX[j].playing=0;
+			}
 			//IF NOT DO NOTHING
 		}
-	j++;
+		j++;
 	}
 
 
