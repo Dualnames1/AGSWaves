@@ -229,7 +229,7 @@ void StartingValues()
 
 
 
-void getLPCoe(const int samplerate, const double cutoff, double* const ax, double* const by)
+void getLPCoe(int samplerate, double cutoff, double ax[], double by[])
 {
    double PI      = 3.1415926535897932385;
     double sqrt2 = 1.4142135623730950488;
@@ -239,7 +239,7 @@ void getLPCoe(const int samplerate, const double cutoff, double* const ax, doubl
     double gain = 1 / (1+sqrt2/QcWarp + 2/(QcWarp*QcWarp));
     by[2] = (1 - sqrt2/QcWarp + 2/(QcWarp*QcWarp)) * gain;
     by[1] = (2 - 2 * 2/(QcWarp*QcWarp)) * gain;
-    //by[0] = 1;
+    by[0] = 1;//
     ax[0] = 1 * gain;
     ax[1] = 2 * gain;
     ax[2] = 1 * gain;
@@ -265,7 +265,6 @@ void LPEffect(int chan, void *stream, int len, void *udata)
 	double RC = 1.0/(CUTOFF*16*3.14);
     double dt = 1.0/(SAMPLE_RATE);
     double alpha = dt/(RC+dt);
-
 
 
 
@@ -300,6 +299,7 @@ struct MusicStream
 	const char* Filename;
 	int repeat;
 	stb_vorbis*Vorbis;
+	bool fix_click;
 };
 
 SDL_AudioSpec spec[2];
@@ -329,7 +329,9 @@ void OGGAudioCallbackZero(void* userData, Uint8* stream, int len)
 	for(int i = 0; i < (len/2); i++)
     {
 		samples[i] = (samplesINPUT[i]*globalStream[getMID].volume)/100;
-	   if (pf<=0 && globalStream[getMID].repeat==1)
+	   int nf=0;
+	   if (globalStream[getMID].fix_click) nf=4095;
+	   if (pf<=nf && globalStream[getMID].repeat==1)
 	   {
 		   stb_vorbis_seek(globalStream[getMID].Vorbis,0);
 		   pf=stb_vorbis_get_samples_short_interleaved(globalStream[getMID].Vorbis, 2, samples, len/sizeof(short));
@@ -340,9 +342,9 @@ void OGGAudioCallbackZero(void* userData, Uint8* stream, int len)
 
 
 
-	if (OGG_Filter&& globalStream[getMID].volume>0)
+	if (OGG_Filter&& globalStream[getMID].volume>1)
 	{
-	int CUTOFF=GeneralAudio.FilterFrequency;
+	int CUTOFF=50;//GeneralAudio.FilterFrequency;
 	float SAMPLE_RATE=48000.0;
 
 
@@ -402,8 +404,10 @@ void OGGAudioCallbackOne(void* userData, Uint8* stream, int len)
 
 	for(int i = 0; i < (len/2); i++)
     {
-		samples[i] = (samplesINPUT[i]*globalStream[getMID].volume)/100;
-	   if (pf<=0 && globalStream[getMID].repeat==1)
+	   samples[i] = (samplesINPUT[i]*globalStream[getMID].volume)/100;
+	   int nf=0;
+	   if (globalStream[getMID].fix_click) nf=4095;
+	   if (pf<=nf && globalStream[getMID].repeat==1)
 	   {
 		   stb_vorbis_seek(globalStream[getMID].Vorbis,0);
 		   pf=stb_vorbis_get_samples_short_interleaved(globalStream[getMID].Vorbis, 2, samples, len/sizeof(short));
@@ -414,9 +418,9 @@ void OGGAudioCallbackOne(void* userData, Uint8* stream, int len)
 
 
 
-	if (OGG_Filter && globalStream[getMID].volume>0)
+	if (OGG_Filter && globalStream[getMID].volume>1)
 	{
-	int CUTOFF=GeneralAudio.FilterFrequency;
+	int CUTOFF=50;//GeneralAudio.FilterFrequency;
 	float SAMPLE_RATE=48000.0;
 
 
@@ -504,7 +508,7 @@ void OGGendAudio()
    // free(getDevice);
 }
 
-void OGGplayMusic(const char*filename, int volume, int repeat, int id)
+void OGGplayMusic(const char*filename, int volume, int repeat, int id, bool fixclick)
 {
 	if (repeat==-1) repeat=1;
 	else repeat=0;
@@ -512,6 +516,7 @@ void OGGplayMusic(const char*filename, int volume, int repeat, int id)
 	globalStream[id].repeat=repeat;
 	globalStream[id].volume=volume;
 	globalStream[id].Filename=filename;
+	globalStream[id].fix_click=fixclick;
 
 	globalStream[id].Vorbis = stb_vorbis_open_filename(filename, NULL, NULL);
 
@@ -561,6 +566,8 @@ void GetSoundPath(const char* destinationPath, int j)
 	return;
 }
 
+
+
 void ApplyFilter(int SetFrequency)
 {
 	OGG_Filter=true;
@@ -572,7 +579,7 @@ void ApplyFilter(int SetFrequency)
 	int i=0;
 	while (i < 500)
 	{
-		if (SFX[i].playing && SFX[i].filter==1)
+		if (SFX[i].playing && SFX[i].filter==1 && SFX[i].volume>1)
 		{
 			Mix_RegisterEffect(SFX[i].channel, LPEffect, NULL, NULL);
 		}
@@ -582,6 +589,8 @@ void ApplyFilter(int SetFrequency)
 	//Mix_RegisterEffect(MIX_CHANNEL_POST, LPEffect, NULL, NULL);//MIX_CHANNEL_POST
 
 }
+
+
 
 void RemoveFilter()
 {
@@ -600,7 +609,11 @@ void RemoveFilter()
 
 void UnloadSFX(int i)
 {
-	if (SFX[i].chunk!=NULL)Mix_FreeChunk(SFX[i].chunk);
+	if (SFX[i].chunk!=NULL)
+	{
+		Mix_FreeChunk(SFX[i].chunk);
+		SFX[i].chunk=NULL;
+	}
 }
 
 void LoadSFX(int i)
@@ -617,7 +630,7 @@ void SetAudioDriver(const char*name)
 
 void SDLMain()
 {
-	engine->DisableSound();
+	//engine->DisableSound();
 
     //SDL_Init(SDL_INIT_AUDIO);
     //OPEN DEVICE
@@ -767,9 +780,17 @@ void PlaySFX(int SoundToPlay, int repeat)
 			i++;
 	    }
 
+
 		if (SFX[SoundToPlay].allow==1)
 		{
 			id=-1;
+		}
+		else 
+		{
+			if (SFX[SoundToPlay].playing)
+			{
+				id=20;
+			}
 		}
 
 		if (id==-1)
@@ -783,7 +804,7 @@ void PlaySFX(int SoundToPlay, int repeat)
 		Mix_Volume(grabChan,GeneralAudio.SoundValue);
 		Mix_UnregisterAllEffects(grabChan);
 
-		if (OGG_Filter && SFX[SoundToPlay].filter)
+		if (OGG_Filter && SFX[SoundToPlay].filter&& SFX[SoundToPlay].volume>1)
 		{
 			Mix_RegisterEffect(grabChan, LPEffect, NULL, NULL);
 		}
@@ -871,15 +892,16 @@ void SFXStop(int SoundToStop,int fadems)
 		int i=0;
 		while (i < GeneralAudio.NumOfChannels)
 		{
-		if (Mix_Playing(i)!=0 && Mix_GetChunk(i)!=NULL && Mix_GetChunk(i)==SFX[SoundToStop].chunk)
-		{
-			SFX[SoundToStop].playing=0;
-			SFX[SoundToStop].repeat=0;
-			SFX[SoundToStop].channel=-2;
-			//SFX[SoundToStop].position=0;
-			Mix_FadeOutChannel(i, fadems);
-		}
-		i++;
+			if (Mix_Playing(i)!=0 && Mix_GetChunk(i)!=NULL && Mix_GetChunk(i)==SFX[SoundToStop].chunk)
+			{
+				SFX[SoundToStop].playing=0;
+				SFX[SoundToStop].repeat=0;
+				SFX[SoundToStop].channel=-2;
+				//SFX[SoundToStop].position=0;
+				Mix_FadeOutChannel(i, fadems);	
+				if (fadems==0) UnloadSFX(SoundToStop);
+			}
+			i++;
 		}
 	}
 }
@@ -899,7 +921,7 @@ int MusicGetVolume()
 
 
 
-void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,bool forceplay)
+void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,bool forceplay,bool fixclick)
 {
 	if (GeneralAudio.Disabled)
 	{
@@ -921,7 +943,7 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 		{
 			OGGinitAudio(0);
 		}
-		OGGplayMusic(MusicLoads[MusicToPlay].musicPath, 0,repeat,0);
+		OGGplayMusic(MusicLoads[MusicToPlay].musicPath, 0,repeat,0,fixclick);
 		MFXStream.ID=MusicToPlay;		
 		MFXStream.FadeTime=(fadeinMS/1000)*40;
 		MFXStream.FadeRate=float(MusicGetVolume())/float(MFXStream.FadeTime);
@@ -938,7 +960,7 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 			OGGinitAudio(1);
 			GeneralAudio.Initialized=true;
 		}
-		OGGplayMusic(MusicLoads[MusicToPlay].musicPath, 0,repeat,1);
+		OGGplayMusic(MusicLoads[MusicToPlay].musicPath, 0,repeat,1,fixclick);
 
 		MFXStream.ID=MusicToPlay;
 		MFXStream.FadeTime=(fadeoutMS/1000)*40;
@@ -971,7 +993,37 @@ void MusicStop(int fadeoutMS)
 }
 
 
-
+void GlitchFix()
+{
+	if (MFXStream.Channel!=-1)
+	{
+	if (MFXStream.Channel==0 || MFXStream.Channel==1)
+	{
+		MFXStream.FadeVolume=float(MusicGetVolume());		
+		if (MFXStream.Channel==0) 
+		{
+			if (!MFXStream.HaltedZero)globalStream[0].volume=MFXStream.FadeVolume;//0-100
+			if (!MFXStream.HaltedOne)globalStream[1].volume=float(MusicGetVolume())-globalStream[0].volume;//100-0
+		}
+		else 
+		{
+			if (!MFXStream.HaltedOne)globalStream[1].volume=MFXStream.FadeVolume;//0-100
+			if (!MFXStream.HaltedZero)globalStream[0].volume=float(MusicGetVolume())-globalStream[1].volume;//100-0
+		}
+		MFXStream.FadeTime=0;
+		MFXStream.Channel=-1;		
+	}
+	else if (MFXStream.Channel==2 || MFXStream.Channel==3)
+	{
+		MFXStream.FadeTime=0;
+		MFXStream.FadeVolume=0.0;		
+		globalStream[MFXStream.Channel-2].volume=MFXStream.FadeVolume;
+		if (MFXStream.Channel==2) MFXStream.HaltedZero=true;
+		else MFXStream.HaltedOne=true;
+		MFXStream.Channel=-1;		
+	}
+	}
+}
 
 
 void SFXSetGlobalVolume(int Vol)
@@ -1061,6 +1113,12 @@ void Update()
 			{				
 				id=i;
 		    }
+			if (!Mix_Playing(i) && Mix_GetChunk(i)!=NULL && SFX[j].chunk!=NULL && Mix_GetChunk(i)==SFX[j].chunk && SFX[j].playing==0
+				&& SFX[j].repeat==0)
+			{
+				UnloadSFX(j);
+			}
+
 			i++;
 	    }
 		if (id!= -1)
@@ -1088,7 +1146,7 @@ void Update()
 			    Mix_PlayChannel(grabChan,SFX[j].chunk,0);
 				Mix_Volume(grabChan,GeneralAudio.SoundValue);
 				Mix_UnregisterAllEffects(grabChan);
-				if (SFX[j].filter==1 && OGG_Filter)
+				if (SFX[j].filter==1 && OGG_Filter && SFX[j].volume>1)
 				{
 					Mix_RegisterEffect(grabChan, LPEffect, NULL, NULL);
 				}
@@ -1100,6 +1158,7 @@ void Update()
 			{
 				SFX[j].channel=-2;
 				SFX[j].playing=0;
+				UnloadSFX(j);
 			}
 			//IF NOT DO NOTHING
 		}
@@ -4457,9 +4516,9 @@ void DrawScreenEffect(int sprite,int sprite_prev,int ide,int n)
 
 
 
-void Music_Play(int MFX, int repeat,int fadeinMS,int fadeoutMS,int Position)
+void Music_Play(int MFX, int repeat,int fadeinMS,int fadeoutMS,int Position,bool fixclick)
 {
-	MusicPlay(MFX,repeat,fadeinMS,fadeoutMS,Position,false);
+	MusicPlay(MFX,repeat,fadeinMS,fadeoutMS,Position,false,fixclick);
 }
 
 void SFX_Play(int SFX, int repeat)
@@ -4544,6 +4603,7 @@ void Load_SFX(int SFX)
 
 void Audio_Apply_Filter(int Frequency)
 {
+	GlitchFix();
 	ApplyFilter(Frequency);
 }
 void Audio_Remove_Filter()
@@ -4873,7 +4933,7 @@ const char* scriptHeader =
   "import void SFX_PlayNLP(int SFX,int volume);\r\n"
   "import void SFX_SetVolume(int SFX,int volume);\r\n"
   "import int SFX_GetVolume(int SFX);\r\n"
-  "import void Music_Play(int MFX, int repeat,int fadeinMS,int fadeoutMS,int Position);\r\n"
+  "import void Music_Play(int MFX, int repeat,int fadeinMS,int fadeoutMS,int Position, bool fixclick=false);\r\n"
   "import void Music_SetVolume(int volume);\r\n"
   "import int Music_GetVolume();\r\n"
   "import void SFX_Stop(int SFX,int fademsOUT);\r\n"
