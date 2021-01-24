@@ -799,7 +799,9 @@ void PlaySFX(int SoundToPlay, int repeat)
 		SFX[SoundToPlay].volume=SFXGetVolume(SoundToPlay);
 
 		Mix_VolumeChunk(SFX[SoundToPlay].chunk,SFX[SoundToPlay].volume);
-		int grabChan=Mix_PlayChannel(-1,SFX[SoundToPlay].chunk,0);	//-1
+		int rep=repeat;
+		if (repeat!=-1)repeat=0;
+		int grabChan=Mix_PlayChannel(-1,SFX[SoundToPlay].chunk,repeat);	//-1
 		SFX[SoundToPlay].channel=grabChan;
 		Mix_Volume(grabChan,GeneralAudio.SoundValue);
 		Mix_UnregisterAllEffects(grabChan);
@@ -1135,7 +1137,7 @@ void Update()
 		{
 			//sound is not playing
 			//IF REPEAT PLAY SOUND
-			if (SFX[j].repeat!=0)
+			if (SFX[j].repeat!=0 && SFX[j].repeat!=-1)
 			{
 				//engine->AbortGame("repeated");
 				//REDUCE REPEAT BY 1
@@ -4862,25 +4864,6 @@ int AGS_EngineOnEvent(int event, int data)
 		engine->FRead(&SFX[j].repeat,sizeof(int),data);
 		engine->FRead(&SFX[j].volume,sizeof(int),data);
 		engine->FRead(&SFX[j].playing,sizeof(int),data);
-
-
-		if (SFX[j].playing==1&& SFX[j].chunk==NULL)
-		{
-			LoadSFX(j);
-		}
-
-		if (SFX[j].playing==1 && SFX[j].chunk!=NULL)
-		{
-			if (SFX[j].repeat!=0)
-			{
-				Mix_VolumeChunk(SFX[j].chunk,SFX[j].volume);
-				Mix_PlayChannel(-1,SFX[j].chunk,0);
-			}
-			else
-			{
-				SFX[j].playing=0;
-			}
-		}
 		j++;
 	}
 

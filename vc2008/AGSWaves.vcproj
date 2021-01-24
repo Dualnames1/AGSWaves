@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="AGSWaves"
 	ProjectGUID="{0FB87A8E-631A-4E84-B822-1A23755E4393}"
 	RootNamespace="AGSWaves"
@@ -184,7 +184,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\..\..\Common\plugin\agsplugin.h"
+				RelativePath="..\plugin\agsplugin.h"
 				>
 			</File>
 			<File
