@@ -3392,7 +3392,82 @@ void DrawForceField(int spriteD, int scale, float speed,int id)
 
 }
 
+float d_time;
 
+#define texWidth 240
+#define texHeight 240
+#define screenWidth 640
+#define screenHeight 360
+
+// Y-coordinate first because we use horizontal scanlines
+Uint32 texture[texHeight][texWidth];
+int distanceTable[screenHeight][screenWidth];
+int angleTable[screenHeight][screenWidth];
+Uint32 buffer[screenHeight][screenWidth];
+
+bool generateonce=false;
+
+void DrawTunnel(int spriteD, float scale, float speed)
+{
+	d_time=speed;
+    BITMAP* src = engine->GetSpriteGraphic(spriteD);
+	unsigned int** pixela = (unsigned int**)engine->GetRawBitmapSurface(src);
+	int src_width=640;
+	int src_height=360;
+	int src_depth=32;
+    engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+
+    BITMAP* src2 = engine->GetSpriteGraphic(int(scale));
+	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src2);
+int h=screenHeight;
+  int w=screenWidth;
+	if (!generateonce)
+	{
+		generateonce=true;
+	//generate texture
+  for(int y = 0; y < texHeight; y++)
+  {
+  for(int x = 0; x < texWidth; x++)
+  {
+    texture[y][x] = pixelb[y][x];
+  }
+  }
+  
+  //generate non-linear transformation table
+  for(int y = 0; y < h; y++)
+  {
+  for(int x = 0; x < w; x++)
+  {
+    int angle, distance;
+    float ratio = 32.0;
+    distance = int(ratio * texHeight / sqrt((x - w / 2.0) * (x - w / 2.0) + (y - h / 2.0) * (y - h / 2.0))) % texHeight;
+    angle = (unsigned int)(0.5 * texWidth * atan2(y - h / 2.0, x - w / 2.0) / 3.1416);
+    distanceTable[y][x] = distance;///4.0;
+    angleTable[y][x] = angle;
+  }
+  }
+	}
+
+	int shiftX = int(texWidth * 0.75 * d_time);
+    int shiftY = int(texHeight * 1.0 * d_time);
+
+    for(int y = 0; y < h; y++)
+	{
+    for(int x = 0; x < w; x++)
+    {
+      //get the texel from the texture by using the tables, shifted with the animation values
+      int color = texture[(unsigned int)(distanceTable[y][x] + shiftX)  % texWidth][(unsigned int)(angleTable[y][x] + shiftY) % texHeight];
+      //buffer[y][x] = color;
+	  pixela[y][x]=color;
+    }
+	}
+    
+
+	
+
+    engine->ReleaseBitmapSurface(src2);
+    engine->ReleaseBitmapSurface(src);
+}
 
 void DrawCloud(int spriteD, int scale, float speed)
 {
@@ -4652,6 +4727,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("DrawBlur",(void*)&DrawBlur);
   engine->RegisterScriptFunction("SetColorShade",(void*)&SetColorShade);
   engine->RegisterScriptFunction("DrawCloud",(void*)&DrawCloud);
+  engine->RegisterScriptFunction("DrawTunnel",(void*)&DrawTunnel);
   engine->RegisterScriptFunction("DrawForceField",(void*)&DrawForceField);
   engine->RegisterScriptFunction("DrawLightning",(void*)&DrawLightning);
   engine->RegisterScriptFunction("Grayscale",(void*)&Grayscale);
@@ -4935,6 +5011,7 @@ const char* scriptHeader =
   "import void DrawBlur(int spriteD,int radius);\r\n"
   "import void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id);\r\n"
   "import void DrawCloud(int spriteD, int scale, float speed);\r\n"
+  "import void DrawTunnel(int spriteD, float scale, float speed);\r\n"
   "import void DrawForceField(int spriteD, int scale, float speed,int id);\r\n"
   "import void SetColorShade(int Rn,int Gn,int Bn, int idn);\r\n"
   "import void Grayscale(int sprite);\r\n"
