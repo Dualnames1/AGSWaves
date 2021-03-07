@@ -1110,9 +1110,9 @@ void Update()
 		int id=-1;
 		while (i < GeneralAudio.NumOfChannels)
 		{
-			Mix_Volume(i,GeneralAudio.SoundValue);
 			if (Mix_Playing(i) && Mix_GetChunk(i)!=NULL && Mix_GetChunk(i)==SFX[j].chunk)
-			{				
+			{
+				if (SFX[j].playing==1)Mix_Volume(i,GeneralAudio.SoundValue);
 				id=i;
 		    }
 			if (!Mix_Playing(i) && Mix_GetChunk(i)!=NULL && SFX[j].chunk!=NULL && Mix_GetChunk(i)==SFX[j].chunk && SFX[j].playing==0
@@ -3392,6 +3392,69 @@ void DrawForceField(int spriteD, int scale, float speed,int id)
 
 }
 
+
+
+
+void DrawCylinder(int spriteD, int ogsprite)
+{
+	BITMAP* src = engine->GetSpriteGraphic(spriteD);
+	unsigned int** pixela = (unsigned int**)engine->GetRawBitmapSurface(src);
+	int src_width=640;
+	int src_height=640;
+	int src_depth=32;
+    engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+
+	BITMAP* src2 = engine->GetSpriteGraphic(ogsprite);
+	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src2);
+	engine->ReleaseBitmapSurface(src2);
+    int height=src_height;
+	int width=src_width;
+
+	for(int y = 0; y < height; y++)
+	{
+		for(int x = 0; x < width; x++)
+		{
+			//convertPoint(x,y,width,height);
+
+			//center the point at 0,0
+			float pcx=x-width/2;
+			float pcy=y-height/2;
+			
+			//these are your free parameters
+			float f = width/2;
+			float r = width;
+			
+			float omega = width/2;
+			float z0 = f - sqrt(r*r-omega*omega);			
+			float zc = (2*z0+sqrt(4*z0*z0-4*(pcx*pcx/(f*f)+1)*(z0*z0-r*r)))/(2* (pcx*pcx/(f*f)+1)); 
+			
+			float finalpointx=pcx*zc/f;
+			float finalpointy=pcy*zc/f;
+			finalpointx += width/2;
+			finalpointy += height/2;
+
+
+			int cposx=finalpointx;
+			int cposy=finalpointy;
+			if(cposx < 0 ||
+				cposx > width-1 ||
+				cposy < 0 ||
+				cposy > height-1)
+			{
+				pixela[y][x]=SetColorRGBA(0,0,0,0);
+			}
+			else 
+			{
+				pixela[y][x] = pixelb[cposy][cposx];
+			}
+		}
+	}
+	
+    engine->ReleaseBitmapSurface(src);
+}
+
+
+
 float d_time;
 
 #define texWidth 240
@@ -4728,6 +4791,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("SetColorShade",(void*)&SetColorShade);
   engine->RegisterScriptFunction("DrawCloud",(void*)&DrawCloud);
   engine->RegisterScriptFunction("DrawTunnel",(void*)&DrawTunnel);
+  engine->RegisterScriptFunction("DrawCylinder",(void*)&DrawCylinder);
   engine->RegisterScriptFunction("DrawForceField",(void*)&DrawForceField);
   engine->RegisterScriptFunction("DrawLightning",(void*)&DrawLightning);
   engine->RegisterScriptFunction("Grayscale",(void*)&Grayscale);
@@ -5012,6 +5076,7 @@ const char* scriptHeader =
   "import void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id);\r\n"
   "import void DrawCloud(int spriteD, int scale, float speed);\r\n"
   "import void DrawTunnel(int spriteD, float scale, float speed);\r\n"
+  "import void DrawCylinder(int spriteD, int ogsprite);\r\n"
   "import void DrawForceField(int spriteD, int scale, float speed,int id);\r\n"
   "import void SetColorShade(int Rn,int Gn,int Bn, int idn);\r\n"
   "import void Grayscale(int sprite);\r\n"
