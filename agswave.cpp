@@ -3761,6 +3761,79 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 }
 
 
+
+
+void OutlineOnly(int sprite,int refsprite, int red,int ged,int bed,int aed, int trans)
+{
+	BITMAP* src = engine->GetSpriteGraphic(refsprite);
+	unsigned int** pixel_src = (unsigned int**)engine->GetRawBitmapSurface(src);
+
+	int src_width=640;
+	int src_height=360;
+	int src_depth=32;
+	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
+
+	//OUTLINE
+	engine->ReleaseBitmapSurface(src);
+
+
+	BITMAP*dst = engine->GetSpriteGraphic(sprite);
+	unsigned int** pixel_dst = (unsigned int**)engine->GetRawBitmapSurface(dst);
+
+	int x,y;
+	for (x = 0; x < src_width; x++)
+	{
+		//y=0;
+		for (y = 0; y < src_height; y++)
+		{
+			if (!IsPixelTransparent(pixel_src[y][x]))
+			{
+				int colorLeft=SetColorRGBA(red,ged,bed,trans);
+				pixel_dst[y][x]=colorLeft;
+			}
+			else
+			{
+				int pcount=0;
+				int gy=-1;
+				while (gy < 2)
+				{
+					int gx=-1;
+					while (gx < 2)
+					{
+						int sx=x+gx;
+						int sy=y+gy;
+
+						if (sx <0) sx=0;
+						if (sy <0) sy=0;
+						if (sx > src_width-1) sx=src_width-1;
+						if (sy > src_height-1) sy=src_height-1;
+
+						if (!IsPixelTransparent(pixel_src[sy][sx]))
+						{
+							pcount++;
+						}
+
+						gx++;
+					}
+					gy++;
+				}
+
+				if (pcount >=2)
+				{
+					int colorLeft=SetColorRGBA(red,ged,bed,aed);
+					pixel_dst[y][x]=colorLeft;
+				}
+			}
+		}
+
+	}
+
+
+	//OUTLINE
+	engine->ReleaseBitmapSurface(dst);
+}
+
+
 struct DustParticle{
 int x;
 int y;
@@ -4799,6 +4872,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("AdjustSpriteFont",(void*)&AdjustSpriteFont);
   engine->RegisterScriptFunction("SpriteGradient",(void*)&SpriteGradient);
   engine->RegisterScriptFunction("Outline",(void*)&Outline);
+  engine->RegisterScriptFunction("OutlineOnly",(void*)&OutlineOnly);
   engine->RegisterScriptFunction("SaveVariable",(void*)&SaveVariable);
   engine->RegisterScriptFunction("ReadVariable",(void*)&ReadVariable);
   engine->RegisterScriptFunction("GameDoOnceOnly",(void*)&GameDoOnceOnly);
@@ -5084,6 +5158,7 @@ const char* scriptHeader =
   "import void AdjustSpriteFont(int sprite,int rate,int outlineRed,int outlineGreen,int outlineBlue);\r\n"
   "import void SpriteGradient(int sprite,int rate,int toy);\r\n"
   "import void Outline(int sprite,int red,int ged,int bed,int aed);\r\n"
+  "import void OutlineOnly(int sprite,int refsprite,int red,int ged,int bed,int aed, int trans);\r\n"
   "import void SaveVariable(String value,int id);\r\n"
   "import String ReadVariable(int id);\r\n"
   "import int GameDoOnceOnly(String value);\r\n"
