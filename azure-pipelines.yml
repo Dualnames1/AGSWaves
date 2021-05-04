@@ -120,7 +120,7 @@ steps:
     tag: $(tagname)
     assetUploadMode: 'replace' 
     action: 'edit' 
-    gitHubConnection: agswaves
+    gitHubConnection: Dualnames1
     repositoryName: Dualnames1/AGSWaves          
     assets: |
          $(Build.ArtifactStagingDirectory)/*.dll
