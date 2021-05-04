@@ -115,9 +115,7 @@ steps:
 # Upload to Github Release
 - task: GithubRelease@0 
   displayName: 'Create GitHub Release'  
-  inputs:
-    tagSource: 'auto'
-    tag: $(tagname)
+  inputs:    
     assetUploadMode: 'replace' 
     action: 'edit' 
     gitHubConnection: Dualnames1
