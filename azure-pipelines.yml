@@ -115,10 +115,12 @@ steps:
 # Upload to Github Release
 - task: GithubRelease@0 
   displayName: 'Create GitHub Release'  
-  inputs:    
+  inputs:
+    tagSource: 'auto'
+    tag: $(tagname)
     assetUploadMode: 'replace' 
     action: 'edit' 
-    gitHubConnection: AGSWaves
+    gitHubConnection: agswaves
     repositoryName: Dualnames1/AGSWaves          
     assets: |
          $(Build.ArtifactStagingDirectory)/*.dll
