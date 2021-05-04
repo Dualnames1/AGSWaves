@@ -118,7 +118,7 @@ steps:
   inputs:    
     assetUploadMode: 'replace' 
     action: 'edit' 
-    gitHubConnection: Dualnames1
+    gitHubConnection: AGSWaves
     repositoryName: Dualnames1/AGSWaves          
     assets: |
          $(Build.ArtifactStagingDirectory)/*.dll
