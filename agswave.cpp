@@ -1118,7 +1118,7 @@ void Update()
 			if (!Mix_Playing(i) && Mix_GetChunk(i)!=NULL && SFX[j].chunk!=NULL && Mix_GetChunk(i)==SFX[j].chunk && SFX[j].playing==0
 				&& SFX[j].repeat==0)
 			{
-				UnloadSFX(j);
+				//UnloadSFX(j);
 			}
 
 			i++;
@@ -1160,7 +1160,7 @@ void Update()
 			{
 				SFX[j].channel=-2;
 				SFX[j].playing=0;
-				UnloadSFX(j);
+				//UnloadSFX(j);
 			}
 			//IF NOT DO NOTHING
 		}
@@ -4922,7 +4922,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RequestEventHook(AGSE_PRESCREENDRAW);
   engine->RequestEventHook(AGSE_SAVEGAME);
   engine->RequestEventHook(AGSE_RESTOREGAME);
-  engine->RequestEventHook(AGSE_POSTSCREENDRAW);
+  engine->RequestEventHook(AGSE_ENTERROOM);
 
   
   int j=0;
@@ -5103,8 +5103,27 @@ int AGS_EngineOnEvent(int event, int data)
 	//engine->UnrequestEventHook(AGSE_RESTOREGAME);
 
   }
-  else if (event ==AGSE_POSTSCREENDRAW)
+  else if (event ==AGSE_ENTERROOM)
   {
+	  
+	int j=0;
+	while (j < 500-1)
+	{
+		int i=0;
+		while (i < GeneralAudio.NumOfChannels)
+		{
+			if (!Mix_Playing(i) && Mix_GetChunk(i)!=NULL && SFX[j].chunk!=NULL && Mix_GetChunk(i)==SFX[j].chunk && SFX[j].playing==0
+				&& SFX[j].repeat==0)
+			{
+				UnloadSFX(j);
+				//engine->AbortGame("repeated");
+			}
+			i++;
+	    }
+		j++;
+	}
+
+
 
   }
   return 0;
