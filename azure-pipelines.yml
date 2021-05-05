@@ -22,62 +22,7 @@ pool:
   vmImage: $(imageName)
 
 steps:
-# Linux
-- bash: |
-    curl -O https://www.libsdl.org/release/SDL2-2.0.9.tar.gz
-    curl -O https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.4.tar.gz
-    tar -xzf SDL2-2.0.9.tar.gz
-    tar -xzf SDL2_mixer-2.0.4.tar.gz
-    pushd SDL2-2.0.9/ 
-    mkdir $HOME/SDL
-    ./configure --prefix=$HOME/SDL
-    make
-    make install    
-    export PATH=$HOME/SDL/bin:$PATH
-    popd    
-    pushd SDL2_mixer-2.0.4/ 
-    mkdir $HOME/SDL_mixer
-    ./configure --prefix=$HOME/SDL
-    make
-    make install    
-    popd    
-    make
-  condition: eq( variables['Agent.OS'], 'Linux' )
-  displayName: 'make'
 
-- task: CopyFiles@2
-  condition: eq( variables['Agent.OS'], 'Linux' )
-  inputs:
-    sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'libagswaves.so'
-    targetFolder: $(Build.ArtifactStagingDirectory)
-
-# macOS
-- bash: |
-    pushd ~
-    curl -O https://www.libsdl.org/release/SDL2-2.0.9.dmg
-    curl -O https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.4.dmg
-    hdiutil attach SDL2-2.0.9.dmg
-    sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/
-    pushd /Library/Frameworks/SDL2.framework/
-    codesign -f -s - SDL2
-    popd
-    hdiutil attach SDL2_mixer-2.0.4.dmg    
-    sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/
-    pushd /Library/Frameworks/SDL2_mixer.framework/
-    codesign -f -s - SDL2_mixer
-    popd
-    popd
-    make
-  condition: eq( variables['Agent.OS'], 'Darwin' )
-  displayName: 'make'
-
-- task: CopyFiles@2
-  condition: eq( variables['Agent.OS'], 'Darwin' )
-  inputs:
-    sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'libagswaves.dylib'
-    targetFolder: $(Build.ArtifactStagingDirectory)
 
 # Windows
 
