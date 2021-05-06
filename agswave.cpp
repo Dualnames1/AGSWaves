@@ -559,22 +559,20 @@ void GetPath(const char* destinationPath, std::string Folder,std::string Extensi
 
 void GetMusicPath(const char* destinationPath, int j)
 {
-#ifdef WIN32
+
 	 GetPath(destinationPath, "Music\\music",".mfx",j);
-#else
- 	 GetPath(destinationPath, "Music/music",".mfx",j);
-#endif
-	 return;
+
+	 //return;
 }
 
 void GetSoundPath(const char* destinationPath, int j)
 {
-#ifdef WIN32
+//#ifdef WIN32
 	GetPath(destinationPath, "Sounds\\sound",".sfx",j);
-#else
-	GetPath(destinationPath, "Sounds/sound",".sfx",j);
-#endif
-	return;
+//#else
+//	GetPath(destinationPath, "Sounds/sound",".sfx",j);
+
+	//return;
 }
 
 
@@ -646,14 +644,22 @@ void SDLMain()
     //SDL_Init(SDL_INIT_AUDIO);
     //OPEN DEVICE
 	//PICK SDL_AUDIODRIVER FROM WINSETUP READ
-	//int numAudioDrivers = SDL_GetNumAudioDrivers();
-
-	//for(int i=0;i<numAudioDrivers;i++)
-	//{
 		//engine->AbortGame(SDL_GetAudioDriver(i));
 
-	#ifdef WIN32
-	    if (SDL_AudioInit("xaudio")==0)
+	//#ifdef WIN32
+	    if (SDL_AudioInit("alsa")==0)	//WASAPI 0
+		{
+			SetAudioDriver("alsa");
+		}
+		else if (SDL_AudioInit("pulseaudio")==0)	//DUMMY 4
+		{
+			SetAudioDriver("pulseaudio");
+		}
+		else if (SDL_AudioInit("dsp")==0)	//DUMMY 4
+		{
+			SetAudioDriver("dsp");
+		} 
+	    else if (SDL_AudioInit("xaudio")==0)
 		{
 			SetAudioDriver("xaudio");
 		}
@@ -669,19 +675,12 @@ void SDLMain()
 		{
 			SetAudioDriver("wasapi");
 		}
-		else if (SDL_AudioInit("disk")==0)	//DISK 3
-		{
-			SetAudioDriver("disk");
-		}
-		else if (SDL_AudioInit("dummy")==0)	//DUMMY 4
-		{
-			SetAudioDriver("dummy");
-		}
+		
 		else
 		{
 			GeneralAudio.Disabled=true;
 		}
-	#endif
+	//#endif
 
 
 
@@ -3249,6 +3248,11 @@ float fbmN(float px,float py)
 float n_time[20];//=1.0;
 void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id)
 {
+	if (id <0 || id >19)
+        {
+          return;
+        }
+        if (n_time[id] == NULL) n_time[id]=1.0;
 	if (n_time[id]<1.0) n_time[id]=1.0;
 	n_time[id]+=ady;
 	BITMAP* src = engine->GetSpriteGraphic(spriteD);
@@ -3332,6 +3336,11 @@ float noiseField( float tx,float ty,float tz)
 float b_time[5];
 void DrawForceField(int spriteD, int scale, float speed,int id)
 {
+	if (id <0 || id >4)
+        {
+          return;
+        }
+        if (b_time[id] == NULL) b_time[id]=1.0;
 	if (b_time[id]<1.0) b_time[id]=1.0;
 	b_time[id]+=speed;
 	BITMAP* src = engine->GetSpriteGraphic(spriteD);
