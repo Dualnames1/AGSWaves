@@ -41,6 +41,17 @@ inline unsigned long _blender_alpha16_bgr(unsigned long y) __attribute__((always
 inline void calc_x_n(unsigned long bla) __attribute__((always_inline));
 #endif
 
+
+float nmax(float a, float b)
+{
+	return (((a) > (b)) ? (a) : (b));
+}
+float nmin(float a, float b)
+{
+	return (((a) < (b)) ? (a) : (b));
+}         
+
+
 const unsigned int Magic = 0xACAB0000;
 const unsigned int Version = 1;
 const unsigned int SaveMagic = Magic + Version;
@@ -2231,7 +2242,7 @@ int BlendColorScreen(int Ln,int Bn, int perc)
 {
 	
 	//(255 - (((255 - B) * (255 - L)) >> 8)))
-	return (Bn == perc) ? Bn:min(perc, (Ln * Ln / (perc - Bn)));
+	return (Bn == perc) ? Bn:nmin(perc, (Ln * Ln / (perc - Bn)));
 }
 
 
@@ -2496,10 +2507,14 @@ int IntersectLines(float x1, float y1, float x2, float y2, float x3, float y3, f
 }
 
 float min4(float m1, float m2, float m3, float m4) {
-  return min(min(m1, m2), min(m3, m4));
+  float a=nmin(m1, m2);
+  float b=nmin(m3, m4);
+  return nmin(a,b);
 }
 float max4(float m1, float m2, float m3, float m4) {
-  return max(max(m1, m2), max(m3, m4));
+  float a=nmax(m1, m2);
+  float b=nmax(m3, m4);
+  return nmax(a,b);
 }
 
 int ReturnWidth(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
