@@ -559,20 +559,20 @@ void GetPath(const char* destinationPath, std::string Folder,std::string Extensi
 
 void GetMusicPath(const char* destinationPath, int j)
 {
-
+#ifdef WIN32
 	 GetPath(destinationPath, "Music\\music",".mfx",j);
-
-	 //return;
-}
-
+#else
+	GetPath(destinationPath, "Music/music",".mfx",j);
+#endif
+}
 void GetSoundPath(const char* destinationPath, int j)
 {
-//#ifdef WIN32
+#ifdef WIN32
 	GetPath(destinationPath, "Sounds\\sound",".sfx",j);
-//#else
-//	GetPath(destinationPath, "Sounds/sound",".sfx",j);
-
-	//return;
+#else
+	GetPath(destinationPath, "Sounds/sound",".sfx",j);
+#endif
+	//return;
 }
 
 
@@ -594,8 +594,10 @@ void ApplyFilter(int SetFrequency)
 		}
 		i++;
 	}
-
-	//Mix_RegisterEffect(MIX_CHANNEL_POST, LPEffect, NULL, NULL);//MIX_CHANNEL_POST
+	#ifdef WIN32
+	#else	
+	Mix_RegisterEffect(MIX_CHANNEL_POST, LPEffect, NULL, NULL);
+	#endif
 
 }
 
@@ -612,7 +614,10 @@ void RemoveFilter()
 		i++;
 	}
 
-	//Mix_UnregisterAllEffects(MIX_CHANNEL_POST);
+	#ifdef WIN32
+	#else		
+	Mix_UnregisterAllEffects(MIX_CHANNEL_POST);
+	#endif
 }
 
 
@@ -646,7 +651,7 @@ void SDLMain()
 	//PICK SDL_AUDIODRIVER FROM WINSETUP READ
 		//engine->AbortGame(SDL_GetAudioDriver(i));
 
-	//#ifdef WIN32
+	#ifdef WIN32
 	    if (SDL_AudioInit("alsa")==0)	//WASAPI 0
 		{
 			SetAudioDriver("alsa");
@@ -680,14 +685,16 @@ void SDLMain()
 		{
 			GeneralAudio.Disabled=true;
 		}
-	//#endif
+	#endif
 
 
 
        if (!GeneralAudio.Disabled)
 	   {
 		   SDL_Init(SDL_INIT_AUDIO);
+		   #ifdef WIN32
 		   SDL_AudioInit(SDL_GetCurrentAudioDriver());
+		   #endif
 		   if (Mix_OpenAudio(48000,MIX_DEFAULT_FORMAT,2,4096) <0)
 		   {
 			   GeneralAudio.Disabled=true;
@@ -758,13 +765,8 @@ void PlaySFXNoLowPass(int i,int volume)
 	GetSoundPath(soundPath,i);
 	
 	playSound(soundPath,volume);
-    //SDL_Delay(1000);
-
-    /* Pause audio test */
-    //pauseAudio();
 
 }
-//playSound("sounds/door1.wav", SDL_MIX_MAXVOLUME / 2);
 
 void PlaySFX(int SoundToPlay, int repeat)
 {
@@ -772,6 +774,14 @@ void PlaySFX(int SoundToPlay, int repeat)
 	{
 		return;
 	}
+	#ifdef WIN32
+	#else
+	if (OGG_Filter && SFX[SoundToPlay].filter==0)
+	{
+	PlaySFXNoLowPass(SoundToPlay+1000,GeneralAudio.SoundValue);
+	return;
+	}
+	#endif
     if (SFX[SoundToPlay].chunk==NULL)
 	{
 		LoadSFX(SoundToPlay);
@@ -948,6 +958,7 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 	currentMusicRepeat=repeat;
 	currentMusicFadein=fadeinMS;
 	currentMusic=MusicToPlay;
+	#ifdef WIN32
 	if (!MFXStream.Switch)
 	{
 		MFXStream.Channel=0;
@@ -981,6 +992,14 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 		//MusicVolCanBeAdjusted=false;
 	}
 	MFXStream.Switch=!MFXStream.Switch;
+	#else	
+	MFXStream.ID=MusicToPlay;
+	MFXStream.FadeTime=((fadeinMS/2)/1000)*40;
+	MFXStream.FadeVolume=0.0;//float(MusicGetVolume());
+	MFXStream.FadeRate=float(MusicGetVolume())/float(MFXStream.FadeTime);
+	MFXStream.Channel=0;		
+	Mix_FadeOutMusic(fadeinMS/4);
+	#endif
 	}
 
 }
@@ -988,7 +1007,7 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 void MusicStop(int fadeoutMS)
 {
 	//Mix_FadeOutMusic(fadeoutMS);
-
+	#ifdef WIN32
 	if (fadeoutMS > 0 )
 	{		
 		MFXStream.FadeTime=(fadeoutMS/1000)*40;
@@ -1001,12 +1020,16 @@ void MusicStop(int fadeoutMS)
 	MFXStream.FadeRate=float(MusicGetVolume())/float(MFXStream.FadeTime);
 	currentMusicRepeat=0;
 	if (MFXStream.Switch) MFXStream.Channel=2;
-	else MFXStream.Channel=3;	
+	else MFXStream.Channel=3;
+	#else	
+	Mix_FadeOutMusic(fadeoutMS);
+	#endif
 }
 
 
 void GlitchFix()
 {
+	#ifdef WIN32
 	if (MFXStream.Channel!=-1)
 	{
 	if (MFXStream.Channel==0 || MFXStream.Channel==1)
@@ -1035,6 +1058,7 @@ void GlitchFix()
 		MFXStream.Channel=-1;		
 	}
 	}
+	#endif
 }
 
 
@@ -1052,7 +1076,7 @@ void Update()
 		return;
 	}
 
-	//MFXStream.Channel
+	#ifdef WIN32
 	if (MFXStream.Channel==0 || MFXStream.Channel==1)
 	{
 		MFXStream.FadeTime--;
@@ -1111,7 +1135,20 @@ void Update()
 			globalStream[0].volume=0;
 		}
 	}
-
+	#else
+	if (MFXStream.Channel==0)
+	{
+		MFXStream.FadeTime--;
+		MFXStream.FadeVolume+=MFXStream.FadeRate;
+		if (MFXStream.FadeVolume >= float(MusicGetVolume()))
+		{
+		  MFXStream.FadeVolume=float(MusicGetVolume());
+		  Mix_FadeInMusic(musiceffect[currentMusic],currentMusicRepeat,currentMusicFadein);
+		  MFXStream.Channel=-1;
+		}								  
+		
+	}
+	#endif
 	int j=0;
 	while (j < 500-1)
 	{
@@ -3490,7 +3527,6 @@ float d_time;
 Uint32 texture[texHeight][texWidth];
 int distanceTable[screenHeight][screenWidth];
 int angleTable[screenHeight][screenWidth];
-Uint32 buffer[screenHeight][screenWidth];
 
 bool generateonce=false;
 
@@ -3544,7 +3580,7 @@ int h=screenHeight;
     {
       //get the texel from the texture by using the tables, shifted with the animation values
       int color = texture[(unsigned int)(distanceTable[y][x] + shiftX)  % texWidth][(unsigned int)(angleTable[y][x] + shiftY) % texHeight];
-      //buffer[y][x] = color;
+
 	  pixela[y][x]=color;
     }
 	}
