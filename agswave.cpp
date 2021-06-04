@@ -218,7 +218,23 @@ RainParticle RainParticlesFore[400];
 RainParticle RainParticlesBack[800];
 
 
+bool OGG_Filter=false;
 
+#include "stb_vorbis.c"
+#define SDL_AUDIO_ALLOW_CHANGES SDL_AUDIO_ALLOW_ANY_CHANGE
+struct MusicStream
+{
+	int volume;
+	const char* Filename;
+	int repeat;
+	stb_vorbis*Vorbis;
+	bool fix_click;
+};
+
+SDL_AudioSpec spec[2];
+MusicStream globalStream[2];
+SDL_AudioDeviceID getDevice[2];
+bool AudioEnabled=false;
 
 
 void StartingValues()
@@ -236,6 +252,17 @@ void StartingValues()
 	MFXStream.FadeVolume=0.0;
 	MFXStream.HaltedZero=false;
 	MFXStream.HaltedOne=false;
+
+	int j=0;
+	while (j <2)
+	{		
+		globalStream[j].Filename=NULL;
+		globalStream[j].repeat=0;
+		globalStream[j].volume=0;
+		globalStream[j].Vorbis=NULL;
+		globalStream[j].fix_click=false;
+	  j++;
+   }
 }
 
 
@@ -300,23 +327,7 @@ void LPEffect(int chan, void *stream, int len, void *udata)
 }
 
 
-bool OGG_Filter=false;
 
-#include "stb_vorbis.c"
-#define SDL_AUDIO_ALLOW_CHANGES SDL_AUDIO_ALLOW_ANY_CHANGE
-struct MusicStream
-{
-	int volume;
-	const char* Filename;
-	int repeat;
-	stb_vorbis*Vorbis;
-	bool fix_click;
-};
-
-SDL_AudioSpec spec[2];
-MusicStream globalStream[2];
-SDL_AudioDeviceID getDevice;
-bool AudioEnabled=false;
 
 void OGGAudioCallbackZero(void* userData, Uint8* stream, int len)
 {
@@ -480,57 +491,37 @@ void OGGinitAudio(int setID)
 	else spec[setID].callback = OGGAudioCallbackOne;
 	spec[setID].userdata = globalStream[setID].Vorbis;
 
-	getDevice=SDL_OpenAudioDevice(NULL, 0, &spec[setID], NULL, SDL_AUDIO_ALLOW_CHANGES);
-	if (getDevice!=0)
+	getDevice[setID]=SDL_OpenAudioDevice(NULL, 0, &spec[setID], NULL, SDL_AUDIO_ALLOW_CHANGES);
+	if (getDevice[setID]!=0)
 	{
 		AudioEnabled=true;
 
-		if (AudioEnabled) SDL_PauseAudioDevice(getDevice, 0);
-		else SDL_PauseAudioDevice(getDevice, 1);
+		if (AudioEnabled) SDL_PauseAudioDevice(getDevice[setID], 0);
+		else SDL_PauseAudioDevice(getDevice[setID], 1);
 	}
 
 
 }
 
-void OGGendAudio()
-{
-	if(AudioEnabled)
-    {
-		AudioEnabled=false;
-        SDL_PauseAudioDevice(getDevice, 1);
-
-
-        int j=0;
-		while (j <2)
-		{
-		if (globalStream[j].Vorbis!=NULL)
-		{
-			stb_vorbis_close(globalStream[j].Vorbis);
-			globalStream[j].Filename=NULL;
-			globalStream[j].repeat=0;
-			globalStream[j].volume=0;
-			globalStream[j].Vorbis=NULL;
-		}
-		j++;
-		}
-        SDL_CloseAudioDevice(getDevice);
-    }
-
-   // free(getDevice);
-}
 
 void OGGplayMusic(const char*filename, int volume, int repeat, int id, bool fixclick)
 {
 	if (repeat==-1) repeat=1;
 	else repeat=0;
 
+	SDL_LockAudioDevice(getDevice[id]);
+
 	globalStream[id].repeat=repeat;
 	globalStream[id].volume=volume;
 	globalStream[id].Filename=filename;
 	globalStream[id].fix_click=fixclick;
-
+    if (globalStream[id].Vorbis!=NULL)
+	{
+		stb_vorbis_close(globalStream[id].Vorbis);
+		globalStream[id].Vorbis=NULL;
+	}
 	globalStream[id].Vorbis = stb_vorbis_open_filename(filename, NULL, NULL);
-
+    SDL_UnlockAudioDevice(getDevice[id]);
 
 }
 
@@ -564,15 +555,18 @@ void GetMusicPath(const char* destinationPath, int j)
 #else
 	GetPath(destinationPath, "Music/music",".mfx",j);
 #endif
-}
+}
+
 void GetSoundPath(const char* destinationPath, int j)
 {
 #ifdef WIN32
 	GetPath(destinationPath, "Sounds\\sound",".sfx",j);
 #else
 	GetPath(destinationPath, "Sounds/sound",".sfx",j);
-#endif
-	//return;
+#endif
+
+	//return;
+
 }
 
 
@@ -993,9 +987,12 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 	}
 	MFXStream.Switch=!MFXStream.Switch;
 	#else	
-	MFXStream.ID=MusicToPlay;
-	MFXStream.FadeTime=((fadeinMS/2)/1000)*40;
-	MFXStream.FadeVolume=0.0;//float(MusicGetVolume());
+	MFXStream.ID=MusicToPlay;
+
+	MFXStream.FadeTime=((fadeinMS/2)/1000)*40;
+
+	MFXStream.FadeVolume=0.0;//float(MusicGetVolume());
+
 	MFXStream.FadeRate=float(MusicGetVolume())/float(MFXStream.FadeTime);
 	MFXStream.Channel=0;		
 	Mix_FadeOutMusic(fadeinMS/4);
@@ -1138,13 +1135,17 @@ void Update()
 	#else
 	if (MFXStream.Channel==0)
 	{
-		MFXStream.FadeTime--;
-		MFXStream.FadeVolume+=MFXStream.FadeRate;
-		if (MFXStream.FadeVolume >= float(MusicGetVolume()))
+		MFXStream.FadeTime--;
+
+		MFXStream.FadeVolume+=MFXStream.FadeRate;
+
+		if (MFXStream.FadeVolume >= float(MusicGetVolume()))
+
 		{
 		  MFXStream.FadeVolume=float(MusicGetVolume());
 		  Mix_FadeInMusic(musiceffect[currentMusic],currentMusicRepeat,currentMusicFadein);
-		  MFXStream.Channel=-1;
+		  MFXStream.Channel=-1;
+
 		}								  
 		
 	}
@@ -4845,7 +4846,7 @@ int rC(int SFX)
 	//if (SFX==0)	return MFXStream.FadeOut;
 	//else if (SFX==1)	return MFXStream.FadeIn;
 	//else if (SFX==2)	return MFXStream.IsStopped;
-	//OGGendAudio()
+	
 	//GeneralAudio.Disabled=true;
 	//SDL_AudioQuit();
 	//Mix_Quit();
