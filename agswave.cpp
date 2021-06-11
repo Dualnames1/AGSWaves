@@ -99,7 +99,6 @@ struct Soundeffect
 	int allow;
 	int channel;
 	int filter;
-	//int position;
 };
 Soundeffect SFX[500];
 
@@ -127,22 +126,6 @@ struct Mus
 	bool HaltedOne;
 };
 Mus MFXStream;
-
-#define NUM_OCTAVES 4
-float u_time;
-int R1;
-int G1;
-int B1;
-int R2;
-int G2;
-int B2;
-int R3;
-int G3;
-int B3;
-int R4;
-int G4;
-int B4;
-
 
 int currentMusic=-1;
 int currentMusicRepeat=-1;
@@ -219,9 +202,9 @@ RainParticle RainParticlesBack[800];
 
 
 bool OGG_Filter=false;
-
 #include "stb_vorbis.c"
 #define SDL_AUDIO_ALLOW_CHANGES SDL_AUDIO_ALLOW_ANY_CHANGE
+
 struct MusicStream
 {
 	int volume;
@@ -235,6 +218,52 @@ SDL_AudioSpec spec[2];
 MusicStream globalStream[2];
 SDL_AudioDeviceID getDevice[2];
 bool AudioEnabled=false;
+float ix, iy, ua;
+float b_time[5];
+float d_time;
+
+#define texWidth 240
+#define texHeight 240
+#define screenWidth 640
+#define screenHeight 360
+
+// Y-coordinate first because we use horizontal scanlines
+Uint32 texture[texHeight][texWidth];
+int distanceTable[screenHeight][screenWidth];
+int angleTable[screenHeight][screenWidth];
+
+bool generateonce=false;
+struct DustParticle{
+int x;
+int y;
+int transp;
+int life;
+bool active;
+int dx;
+int dy;
+int mlay;
+int timlay;
+int movedport;
+int translay;
+int translayHold;
+};
+
+DustParticle dusts[200];
+int waitBy=6;
+int raysizeDust=200;
+int dsizeDust=0;
+int creationdelay=0;
+int Walkbehind[20];
+char*GameDatavalue[40000];
+char*Token[10000];
+int TokenUnUsed[10000];
+int usedTokens=0;
+
+int dY[30];
+int tDy[30];
+int direction[30];
+
+
 
 
 void StartingValues()
@@ -269,6 +298,7 @@ void StartingValues()
 
 void getLPCoe(int samplerate, double cutoff, double ax[], double by[])
 {
+	//CALCULATES LOWPASS COEFFICIENTS
    double PI      = 3.1415926535897932385;
     double sqrt2 = 1.4142135623730950488;
     double QcRaw  = (2 * PI * cutoff) / samplerate; // Find cutoff frequency in [0..PI]
@@ -284,14 +314,9 @@ void getLPCoe(int samplerate, double cutoff, double ax[], double by[])
 }
 
 
-
-
-
-
-
-
 void LPEffect(int chan, void *stream, int len, void *udata)
 {
+	//APPLIES THE SAME LOW PASS TO SOUND EFFECTS
 	int CUTOFF=GeneralAudio.FilterFrequency;
 	float SAMPLE_RATE=48000.0;
 
@@ -331,6 +356,7 @@ void LPEffect(int chan, void *stream, int len, void *udata)
 
 void OGGAudioCallbackZero(void* userData, Uint8* stream, int len)
 {
+	//MUSIC 1 CHANNEL [CALLED ZERO] for PLAYING AN OGG
 	int getMID=0;
 	if (!AudioEnabled || globalStream[getMID].Vorbis==NULL)
 	{
@@ -370,7 +396,6 @@ void OGGAudioCallbackZero(void* userData, Uint8* stream, int len)
 	float SAMPLE_RATE=48000.0;
 
 
-	//short* samples = (short*)stream;
 	samplesINPUT = samples;
 
 
@@ -407,6 +432,7 @@ void OGGAudioCallbackZero(void* userData, Uint8* stream, int len)
 
 void OGGAudioCallbackOne(void* userData, Uint8* stream, int len)
 {
+	//MUSIC 2 CHANNEL [CALLED ONE for PLAYING AN OGG, STREAMING AN OGG VORBIS.
 	int getMID=1;
 	if (!AudioEnabled || globalStream[getMID].Vorbis==NULL)
 	{
@@ -446,7 +472,6 @@ void OGGAudioCallbackOne(void* userData, Uint8* stream, int len)
 	float SAMPLE_RATE=48000.0;
 
 
-	//short* samples = (short*)stream;
 	samplesINPUT = samples;
 
 
@@ -483,6 +508,8 @@ void OGGAudioCallbackOne(void* userData, Uint8* stream, int len)
 
 void OGGinitAudio(int setID)
 {
+	//INITIATES THE AUDIO DEVICE.
+	//THIS ONLY HAPPENS THE FIRST TIME THE STREAM IS ACTIVATED
     spec[setID].freq = 48000;
     spec[setID].format = MIX_DEFAULT_FORMAT;
     spec[setID].channels = 2;
@@ -506,6 +533,9 @@ void OGGinitAudio(int setID)
 
 void OGGplayMusic(const char*filename, int volume, int repeat, int id, bool fixclick)
 {
+	//THIS PLAY AN OGG FILE AS A STREAM[ONLY FOR MUSIC], WITH A CERTAIN VOLUME[volume 0-100]
+	//AND IF IT'S -1 IT WILL REPEAT INDEFINITELY OTHERWISE IT WILL REPEAT FROM 0-X, whereas 0 means no repetitions, only plays once,
+	//and x is an integer that's higher than 0 and will repeat x amount of times.
 	if (repeat==-1) repeat=1;
 	else repeat=0;
 
@@ -550,6 +580,7 @@ void GetPath(const char* destinationPath, std::string Folder,std::string Extensi
 
 void GetMusicPath(const char* destinationPath, int j)
 {
+	//THIS BASICALLY SETS A CONST CHAR VALUE TO A PATH, IN THIS CASE IT'S THE MUSIC FOLDER AND ALSO POINTS TO A MUSICXX.MFX FILE, WHICH IS AN OGG FILE JUST RENAMED.
 #ifdef WIN32
 	 GetPath(destinationPath, "Music\\music",".mfx",j);
 #else
@@ -559,13 +590,13 @@ void GetMusicPath(const char* destinationPath, int j)
 
 void GetSoundPath(const char* destinationPath, int j)
 {
+	//THIS BASICALLY SETS A CONST CHAR VALUE TO A PATH, IN THIS CASE IT'S THE SOUND FOLDER AND ALSO POINTS TO A SOUNDXX.SFX FILE, WHICH IS AN OGG FILE JUST RENAMED.
 #ifdef WIN32
 	GetPath(destinationPath, "Sounds\\sound",".sfx",j);
 #else
 	GetPath(destinationPath, "Sounds/sound",".sfx",j);
 #endif
 
-	//return;
 
 }
 
@@ -573,10 +604,10 @@ void GetSoundPath(const char* destinationPath, int j)
 
 void ApplyFilter(int SetFrequency)
 {
+	//THIS TURNS ON THE LOW PASS FILTER
 	OGG_Filter=true;
 	GeneralAudio.FilterFrequency=SetFrequency;
 	SetFilterFrequency(SetFrequency);
-	//Mix_HookMusic(OGGAudioCallback,NULL);
 
 
 	int i=0;
@@ -599,6 +630,7 @@ void ApplyFilter(int SetFrequency)
 
 void RemoveFilter()
 {
+	//THIS TURNS OFF THE LOW PASS FILTER
 	SetFilterFrequency(-1);
 	OGG_Filter=false;
 	int i=0;
@@ -617,6 +649,8 @@ void RemoveFilter()
 
 void UnloadSFX(int i)
 {
+	//INTERNAL USAGE
+	//THIS UNLOADS A SOUND FILE FROM MEMORY
 	if (SFX[i].chunk!=NULL)
 	{
 		Mix_FreeChunk(SFX[i].chunk);
@@ -626,6 +660,7 @@ void UnloadSFX(int i)
 
 void LoadSFX(int i)
 {
+	//INTERNAL USAGE, THIS LOADS A SOUND FILE TO MEMORY
 	char musicPath[1024];
 	GetSoundPath(musicPath,i);
 	SFX[i].chunk = Mix_LoadWAV(musicPath);
@@ -633,17 +668,14 @@ void LoadSFX(int i)
 
 void SetAudioDriver(const char*name)
 {
+	//SETS THE AUDIO DRIVER'S ENVIRONMENT VALUE
+	//SEE BELOW IN SDLMAIN
 	SDL_setenv("SDL_AUDIODRIVER", name , 1);
 }
 
 void SDLMain()
 {
-	//engine->DisableSound();
-
-    //SDL_Init(SDL_INIT_AUDIO);
-    //OPEN DEVICE
-	//PICK SDL_AUDIODRIVER FROM WINSETUP READ
-		//engine->AbortGame(SDL_GetAudioDriver(i));
+	
 
 	#ifdef WIN32
 	    if (SDL_AudioInit("alsa")==0)	//WASAPI 0
@@ -709,12 +741,10 @@ void SDLMain()
 			   SFX[i].allow=0;
 			   SFX[i].filter=1;
 			   SFX[i].channel=-2;
-			   //SFX[i].position=0;
 			   i++;
 		   }
 		   initAudio();
 	   }
-	   //SDL_setenv("SDL_DISKAUDIODELAY", "0" , 1);
 
 }
 
@@ -722,6 +752,7 @@ void SDLMain()
 
 void SFXSetVolume(int SoundToAdjust,int vol)
 {
+	//INDIVIDUAL VOLUME PER SFX
 	if (SFX[SoundToAdjust].chunk!=NULL)
 	{
 		Mix_VolumeChunk(SFX[SoundToAdjust].chunk,vol);
@@ -731,6 +762,7 @@ void SFXSetVolume(int SoundToAdjust,int vol)
 
 int SFXGetVolume(int SoundToAdjust)
 {
+	//INDIVIDUAL VOLUME GET PER SFX
 	if (SFX[SoundToAdjust].chunk==NULL)
 	{
 		return 0;
@@ -740,16 +772,20 @@ int SFXGetVolume(int SoundToAdjust)
 
 void SFXFilter(int SoundToFilter,int enable)
 {
+	//THIS ENABLES/DISABLES the SFX LOW PASS FILTER, 
+	//I think by default all sound effects are affected by low pass, but there are some that i've manually disabled from being affected by it with this command
 	SFX[SoundToFilter].filter=enable;
 }
 
 void SFXAllowOverlap(int SoundToAllow,int allow)
 {
+	//ALLOWS SOUND FILES TO STACK. MEANING IF U PLAY THE SAME SOUND IT WILL NOT RESTART, BUT INSTEAD WILL PLAY THE SAME SOUND ON A DIFFERENT CHANNEL
 	SFX[SoundToAllow].allow=allow;
 }
 
 void PlaySFXNoLowPass(int i,int volume)
 {
+	//USED FOR LINUX.
 	if (GeneralAudio.Disabled)
 	{
 		return;
@@ -764,6 +800,8 @@ void PlaySFXNoLowPass(int i,int volume)
 
 void PlaySFX(int SoundToPlay, int repeat)
 {
+	//PLAYS A SOUND FOUL. REPEAT-1 MEANS INDEFINITE REPEATS, 0 MEANS NO REPEAT, 1 MEANS 1 REPEAT AND SO FORTH.
+	//PlaySFX(5,-1) will play SOUND5.SFX in tHE SOUNDS folder.
 	if (GeneralAudio.Disabled)
 	{
 		return;
@@ -1001,27 +1039,6 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 
 }
 
-void MusicStop(int fadeoutMS)
-{
-	//Mix_FadeOutMusic(fadeoutMS);
-	#ifdef WIN32
-	if (fadeoutMS > 0 )
-	{		
-		MFXStream.FadeTime=(fadeoutMS/1000)*40;
-	}
-	else 
-	{
-		MFXStream.FadeTime=0;
-	}
-	MFXStream.FadeVolume=MusicGetVolume();
-	MFXStream.FadeRate=float(MusicGetVolume())/float(MFXStream.FadeTime);
-	currentMusicRepeat=0;
-	if (MFXStream.Switch) MFXStream.Channel=2;
-	else MFXStream.Channel=3;
-	#else	
-	Mix_FadeOutMusic(fadeoutMS);
-	#endif
-}
 
 
 void GlitchFix()
@@ -1173,13 +1190,7 @@ void Update()
 	    }
 		if (id!= -1)
 		{
-			//SOUND IS PLAYING
-			//id is the channel
-			//increase its position by 1
-			//if (SFX[j].playing==1)
-			//{
-			//	SFX[j].position+=1;
-			//}
+			//SOUND IS PLAYING			
 		}
 		else
 		{
@@ -1187,10 +1198,8 @@ void Update()
 			//IF REPEAT PLAY SOUND
 			if (SFX[j].repeat!=0 && SFX[j].repeat!=-1)
 			{
-				//engine->AbortGame("repeated");
 				//REDUCE REPEAT BY 1
 				if (SFX[j].repeat>0) SFX[j].repeat-=1;
-				//SFX[j].position=0;
 				SFXSetVolume(j,SFX[j].volume);
 				int grabChan=SFX[j].channel;
 			    Mix_PlayChannel(grabChan,SFX[j].chunk,0);
@@ -1200,15 +1209,12 @@ void Update()
 				{
 					Mix_RegisterEffect(grabChan, LPEffect, NULL, NULL);
 				}
-				
-				//Mix_RegisterEffect(grabChan, freqEffect, NULL, NULL);//MIX_CHANNEL_POST
 				SFX[j].playing=1;
 			}
 			else 
 			{
 				SFX[j].channel=-2;
 				SFX[j].playing=0;
-				//UnloadSFX(j);
 			}
 			//IF NOT DO NOTHING
 		}
@@ -1219,14 +1225,6 @@ void Update()
 
 }
 
-
-
-
-//WAVE SOUNDS FILES
-
-int dY[30];
-int tDy[30];
-int direction[30];
 
 
 void CastWave(int delayMax, int PixelsWide,int n)
@@ -1249,18 +1247,6 @@ void CastWave(int delayMax, int PixelsWide,int n)
 }
 
 
-
-
-
-//typedef AGSCharacter* (*FUNCTYPE)(int x, int y);
-//FUNCTYPE getCharacterXY = (FUNCTYPE)engine->GetScriptFunctionAddress("Character::GetAtScreenXY^2");
-
-//int resultHeight;
-//int (*func_ptr)(int x, int y);
-//func_ptr=(AGSCharacter(*)(int, int))engine->GetScriptFunctionAddress("Character::GetAtScreenXY");
-
-
-// cLockView script function
 
 int getRcolor(int color) {
 	return ((color >> 16) & 0xFF);
@@ -1891,24 +1877,14 @@ void WindUpdate(int ForceX, int ForceY, int Transparency,int sprite)
 	//SECOND PARTICLES
 
 
-
     h--;
   }
-
-
-
-
-
-
-
-
-
 
   engine->ReleaseBitmapSurface(src);
 
 }
 
-int cid=0;
+
 
 void CreateRainParticleMid(int x, int y, int fx, int fy, int maxpart)
 {
@@ -2277,8 +2253,6 @@ int BlendColor (int Ln,int Bn, int perc)
 
 int BlendColorScreen(int Ln,int Bn, int perc)
 {
-	
-	//(255 - (((255 - B) * (255 - L)) >> 8)))
 	return (Bn == perc) ? Bn:nmin(perc, (Ln * Ln / (perc - Bn)));
 }
 
@@ -2394,11 +2368,7 @@ void ReverseTransparency(int graphic)
 		{
 			//PIXEL IS VISIBLE
 			sprite_pixels[y][x]=SetColorRGBA(0,0,0,0);
-		}
-
-		//disvalue 0-255
-		//FOR EACH PIXEL IN THE NOISE GRAPHIC THAT IS < DISVALUE
-		//sprite_pixels[y][x]=SetColorRGBA(redClr,greenClr,blueClr,TranClr);		
+		}		
 		
 	}
   }
@@ -2518,10 +2488,6 @@ void Dissolve(int graphic, int noisegraphic, int disvalue)
 
 }
 
-
-//WARP CODE
-
-float ix, iy, ua;
 
 int IntersectLines(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
 {
@@ -2707,11 +2673,6 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
 		int setX=int(clamp(float(x),0.0,float(src_width-1)));
 
 		sprite_pixels[setY][setX]=setcolor;
-
-
-        //dr.DrawingColor = do.GetPixel(int(fx), int(fy));
-        //dr.DrawPixel(x, y);
-	    //DRAW ON THE NEWLY CREATED DYNAMIC SPRITE
       }
 
       x++;
@@ -2724,34 +2685,9 @@ void Warper(int swarp,int sadjust,int x1, int y1, int x2)
 
   newwidth=w;
   newheight=h;
-  // debugging: draw edges
-
-  /*
-  do.DrawingColor = Game.GetColorFromRGB(255, 0, 0);
-  do.DrawLine(x1, y1, x2, y2);
-  do.DrawLine(x2, y2, x4, y4);
-  do.DrawLine(x4, y4, x3, y3);
-  do.DrawLine(x3, y3, x1, y1);
-  */
   engine->ReleaseBitmapSurface(resizeb);
-  //this.ChangeCanvasSize(w, h, 0, 0);
-
-
-  //RETURN HEIGHT AND WIDTH
-  //RETURN DYNAMIC SPRITE GRAPH?
 
 }
-
-//WARP CODE
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2975,14 +2911,6 @@ void RainUpdate(int rdensity, int FX, int FY,int RW,int RH, int graphic, float p
    }
     //BACK
 
-
-
-
-
-
-
-
-
   engine->ReleaseBitmapSurface(src);
 }
 
@@ -3184,167 +3112,15 @@ void DrawBlur(int spriteD, int radius)
 
 
 
-float dotProduct(float vect_Ax,float vect_Ay, float vect_Bx, float vect_By)
-{
-    float product = 0.0;
-	product += vect_Ax * vect_Ay;
-    product += vect_Bx * vect_By;
-    return product;
-}
 
 float fracts(float value)
 {
 	return value-floor(value);
 }
 
-float randr (float stx, float sty)
-{
-	float dot=dotProduct(stx,sty, 13.0,78.0);
-	dot = sin(dot)*43758.5453123;
-	dot = fracts(dot);
-	return dot;
-}
-
-
 float lerp(float x, float y, float fn)
 {
     return x*(1.0-fn)+y*fn;
-}
-
-float noise (float stx,float sty)
-{
-	float ix=floor(stx);
-	float iy=floor(sty);
-
-	float fx=fracts(stx);
-	float fy=fracts(sty);
-
-	float a = randr(ix,iy);
-	float b = randr(ix+1.0,iy+ 0.0);
-    float c = randr(ix + 0.0, iy + 1.0);
-    float d = randr(ix+ 1.0,iy+ 1.0);
-
-	float ux=fx*fx*(3.0-2.0*fx);
-	float uy=fy*fy*(3.0-2.0*fy);
-
-	float mix=lerp(a,b,ux);
-	float value = mix +
-		(c-a)*uy*(1.0 -ux)+
-		(d-b)*ux*uy;
-	return value;
-}
-
-float fbm (float stx,float sty)
-{
-	float v = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < NUM_OCTAVES; ++i) {
-        v += a * noise(stx,sty);
-        stx = cos(0.5)*stx * 2.0 + 100.0;
-        sty = -cos(0.5)*sty * 2.0 + 100.0;
-        stx = cos(0.8)*stx * 2.0 + 100.0;
-        sty = -cos(0.8)*sty * 2.0 + 100.0;
-        a *= 0.5;
-    }
-    return v;
-
-}
-
-
-
-float Hash (float stx, float sty, float s)
-{
-	float dot=dotProduct(stx*abs(sin(s)),sty*abs(sin(s)), 27.1,61.7);
-	dot = sin(dot)*273758.5453123;
-	dot = fracts(dot);
-	return dot;
-}
-float noiseN(float px,float py, float s)
-{
-    float ix=floor(px);
-    float iy=floor(py);
-    float fx=fracts(px);
-    float fy=fracts(py);
-
-    fx *= fx * (3.0-2.0*fx);
-    fy *= fy * (3.0-2.0*fy);
-    float mixA=lerp(Hash(ix,iy, s), Hash(ix+1.0,iy +0.0, s),fx);
-    float mixB=lerp(Hash(ix,iy+1.0, s), Hash(ix+1.0,iy+1.0, s),fx);
-    float mixC = lerp(mixA,mixB,fy)*s;
-
-    return mixC;
-}
-float fbmN(float px,float py)
-{
-     float v = 0.0;
-     v += noiseN(px*1.0,py*1.0, 0.35);
-     v += noiseN(px*2.0,py*2.0, 0.25);
-     v += noiseN(px*4.0,py*4.0, 0.125);
-     v += noiseN(px*8.0,py*8.0, 0.0625);
-     return v;
-}
-float n_time[20];//=1.0;
-void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id)
-{
-	if (id <0 || id >19)
-        {
-          return;
-        }
-        if (n_time[id] == NULL) n_time[id]=1.0;
-	if (n_time[id]<1.0) n_time[id]=1.0;
-	n_time[id]+=ady;
-	BITMAP* src = engine->GetSpriteGraphic(spriteD);
-
-	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
-
-	int src_width=640;
-	int src_height=360;
-	int src_depth=32;
-
-	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
-
-
-    int x,y;
-	for (y = 0; y < src_height; y++)
-	{
-		for (x = 0; x < src_width; x++)
-		{
-			int setY=y;
-			if (setY<0) setY=0;
-			//if (setY>src_height-1) setY=src_height-1;
-			int setX=x;
-			if (setX<0) setX=0;
-			//if (setX>src_width-1) setX=src_width-1;
-
-			float uvx=(float(x)/float(scalex))*2.0 - 1.0;
-			float uvy=(float((src_height/-2)+y)/float(scaley))*2.0 - 1.0;
-			uvx *= float(scalex)/float(scaley);
-
-			float uvc = uvy;
-			if (vertical) uvc=uvx;
-
-			float t = abs(1.0 / ((uvc + fbmN( uvx + n_time[id],uvy+n_time[id])) * (speed)));
-			float fr=0.0;
-			float fg=0.0;
-			float fb=0.0;
-			fr += t * (0.839);
-			fr += t * (0.49);
-			fg += t * (0.784);
-			fb += t * (2.82);
-			//gl_FragColor = vec4( vec3(fr,fg,fb), 1.0 );
-			int Rd=int(fr*255.0);
-			int Gd=int(fg*255.0);
-			int Bd=int(fb*255.0);
-			int na=int((t*1.0)*255.0);
-
-			pixelb[setY][setX]= SetColorRGBA(Rd,Gd,Bd,na);
-
-		}
-	}
-
-
-	engine->ReleaseBitmapSurface(src);
-
 }
 
 
@@ -3371,7 +3147,8 @@ float noiseField( float tx,float ty,float tz)
                    lerp( hasher(n+270.0), hasher(n+271.0),fx),fy),fz);
 }
 
-float b_time[5];
+
+
 void DrawForceField(int spriteD, int scale, float speed,int id)
 {
 	if (id <0 || id >4)
@@ -3517,19 +3294,8 @@ void DrawCylinder(int spriteD, int ogsprite)
 
 
 
-float d_time;
 
-#define texWidth 240
-#define texHeight 240
-#define screenWidth 640
-#define screenHeight 360
 
-// Y-coordinate first because we use horizontal scanlines
-Uint32 texture[texHeight][texWidth];
-int distanceTable[screenHeight][screenWidth];
-int angleTable[screenHeight][screenWidth];
-
-bool generateonce=false;
 
 void DrawTunnel(int spriteD, float scale, float speed)
 {
@@ -3593,125 +3359,8 @@ int h=screenHeight;
     engine->ReleaseBitmapSurface(src);
 }
 
-void DrawCloud(int spriteD, int scale, float speed)
-{
-
-	u_time+=speed;
-	BITMAP* src = engine->GetSpriteGraphic(spriteD);
-
-	unsigned int** pixelb = (unsigned int**)engine->GetRawBitmapSurface(src);
-
-	int src_width=640;
-	int src_height=360;
-	int src_depth=32;
-
-	engine->GetBitmapDimensions(src,&src_width,&src_height,&src_depth);
-
-	float shade1x= float(R1)/255.0;
-	float shade1y= float(G1)/255.0;
-	float shade1z= float(B1)/255.0;
-
-	float shade2x= float(R2)/255.0;
-	float shade2y= float(G2)/255.0;
-	float shade2z= float(B2)/255.0;
-
-	float shade3x= float(R3)/255.0;
-	float shade3y= float(G3)/255.0;
-	float shade3z= float(B3)/255.0;
-
-	float shade4x= float(R4)/255.0;
-	float shade4y= float(G4)/255.0;
-	float shade4z= float(B4)/255.0;
-
-    int x,y;
-	for (y = 0; y < src_height; y++)
-	{
-		for (x = 0; x < src_width; x++)
-		{
 
 
-			int setY=y;
-			if (setY<0) setY=0;
-			//if (setY>src_height-1) setY=src_height-1;
-			int setX=x;
-			if (setX<0) setX=0;
-			//if (setX>src_width-1) setX=src_width-1;
-
-
-			float frx=float(x)/float(scale);//140
-			float fry=float(y)/float(scale);
-
-			float qx = fbm(frx,fry);
-			float qy = fbm(frx+ 1.0,fry + 1.0);
-			float rx = fbm(frx+ 1.0*qx + 1.7+ 0.15*u_time,fry + 1.0*qy + 9.2+ 0.15*u_time);
-			float ry = fbm(frx + 1.0*qx + 8.3+ 0.126*u_time,fry + 1.0*qy + 2.8+ 0.126*u_time);
-
-			float colorx,colory,colorz;
-			float fn = fbm(frx+rx,fry+ry);
-
-			float setFZ=clamp((fn*fn)*4.0,0.2,1.0);
-
-			colorx = lerp(float(shade1x),float(shade2x),setFZ);
-			colory = lerp(float(shade1y),float(shade2y),setFZ);
-			colorz = lerp(float(shade1z),float(shade2z),setFZ);
-
-			float lenner = sqrt(qx*qx + qy*qy);
-
-			setFZ=clamp(lenner,float(0.0),float(1.0));
-
-			colorx = lerp(colorx,float(shade3x),setFZ);
-			colory = lerp(colory,float(shade3y),setFZ);
-			colorz = lerp(colorz,float(shade3z),setFZ);
-
-			setFZ=clamp(rx,0.0,1.0);
-			colorx = lerp(colorx,float(shade4x),setFZ);
-			colory = lerp(colory,float(shade4y),setFZ);
-			colorz = lerp(colorz,float(shade4z),setFZ);
-			float id =(fn*fn*fn+0.8*fn*fn+0.78*fn);
-
-			int Rd=int((colorx*id)*255.0);
-			int Gd=int((colory*id)*255.0);
-			int Bd=int((colorz*id)*255.0);
-			int na=int(1.0*255.0);
-
-			pixelb[setY][setX]= SetColorRGBA(Rd,Gd,Bd,na);
-
-		}
-	}
-
-
-	engine->ReleaseBitmapSurface(src);
-
-}
-
-void SetColorShade(int Rn,int Gn,int Bn,int idn)
-{
-
-	if (idn==1)
-	{
-		R1=Rn;
-		G1=Gn;
-		B1=Bn;
-	}
-	else if (idn==2)
-	{
-		R2=Rn;
-		G2=Gn;
-		B2=Bn;
-	}
-	else if (idn==3)
-	{
-		R3=Rn;
-		G3=Gn;
-		B3=Bn;
-	}
-	else if (idn==4)
-	{
-		R4=Rn;
-		G4=Gn;
-		B4=Bn;
-	}
-}
 
 bool IsPixelTransparent(int color)
 {
@@ -3721,7 +3370,7 @@ bool IsPixelTransparent(int color)
 	int ad=getAcolor(color);
 
 
-	if (ad < 255)// || (rd <=10 && gd<=10 && bd<=10))
+	if (ad < 255)
 	{
 		return true;
 	}
@@ -3787,28 +3436,6 @@ void Outline(int sprite,int red,int ged,int bed,int aed)
 					int colorLeft=SetColorRGBA(red,ged,bed,aed);
 					pixel_dst[y][x]=colorLeft;
 				}
-
-				/*
-				if (y >= 1 && IsPixelTransparent(pixel_src[y-1][x]))
-				{
-					int colorLeft=SetColorRGBA(255,20,20,255);
-					pixel_dst[y-1][x]=colorLeft;
-				}
-				if (y < src_height-1 && IsPixelTransparent(pixel_src[y+1][x]))
-				{
-					int colorLeft=SetColorRGBA(255,20,20,255);
-					pixel_dst[y+1][x]=colorLeft;
-				}
-				if (x >= 1 && IsPixelTransparent(pixel_src[y][x-1]))
-				{
-					int colorLeft=SetColorRGBA(255,20,20,255);
-					pixel_dst[y][x-1]=colorLeft;
-				}
-				if (x < src_width-1 && IsPixelTransparent(pixel_src[y][x+1]))
-				{
-					int colorLeft=SetColorRGBA(255,20,20,255);
-					pixel_dst[y][x+1]=colorLeft;
-				}*/
 
 
 			}
@@ -3895,26 +3522,6 @@ void OutlineOnly(int sprite,int refsprite, int red,int ged,int bed,int aed, int 
 }
 
 
-struct DustParticle{
-int x;
-int y;
-int transp;
-int life;
-bool active;
-int dx;
-int dy;
-int mlay;
-int timlay;
-int movedport;
-int translay;
-int translayHold;
-};
-
-DustParticle dusts[200];
-int waitBy=6;
-int raysizeDust=200;
-int dsizeDust=0;
-int creationdelay=0;
 
 
 
@@ -3951,17 +3558,6 @@ void CreateDustParticle(int xx, int yy)
   }
 }
 
-struct ScreenItem
-{
-  int objIndex;
-  int chrIndex;
-  int walkIndex;
-  int baseLine;
-  int ignoreWB;
-};
-
-ScreenItem ItemToDraw[128];
-int Walkbehind[20];
 
 int GetWalkbehindBaserine(int id)
 {
@@ -3972,169 +3568,6 @@ void SetWalkbehindBaserine(int id,int base)
 {
   Walkbehind[id]=base;
 }
-
-
-int CalculateThings(bool clap,int ids)
-{
-  int numThingsToDraw = 0;
-  int i = 0;
-  int RoomObjectCount=engine->GetNumObjects ();
-  int GameCharacterCount=engine->GetNumCharacters();
-  int MaxWalkBehinds=15;
-
-  int pid= engine->GetPlayerCharacter();
-  AGSCharacter *pchar = engine->GetCharacter(pid);
-  int playerRoom=pchar->room;
-
-
-  if (playerRoom==41 || playerRoom==12)
-  {
-    RoomObjectCount=-1;
-  }
-
-
-
-  while (i < RoomObjectCount)
-  {
-	  AGSObject *objec=engine->GetObject(i);
-
-    int baseLine = objec->baseline;
-    if (baseLine <= 0)
-    {
-      baseLine = objec->y;
-    }
-	if (objec->on && objec->transparent<100)
-    {
-	  if (ids==1 && (i==20))
-      {
-      }
-      else
-      {
-      ItemToDraw[numThingsToDraw].objIndex = i;
-      ItemToDraw[numThingsToDraw].chrIndex = -1;
-      ItemToDraw[numThingsToDraw].walkIndex=-1;
-      ItemToDraw[numThingsToDraw].baseLine = baseLine;
-	  ItemToDraw[numThingsToDraw].ignoreWB = (objec->flags & OBJF_NOWALKBEHINDS);
-      if (ItemToDraw[numThingsToDraw].ignoreWB)
-      {
-        ItemToDraw[numThingsToDraw].baseLine +=1000;
-      }
-      numThingsToDraw++;
-	  }
-    }
-    i++;
-  }
-  i = 0;
-
-  while (i < GameCharacterCount)
-  {
-	AGSCharacter *getchar=engine->GetCharacter(i);
-
-	if (getchar->room == playerRoom)
-    {
-	  int baseLine = getchar->baseline;
-      if (baseLine <= 0)
-      {
-		  baseLine = getchar->y;
-      }
-	  if (getchar->transparency<100)
-      {
-        if (ids==1 && (i==0 || i==45 || i==62))
-        {
-        }
-        else
-        {
-        ItemToDraw[numThingsToDraw].objIndex = -1;
-        ItemToDraw[numThingsToDraw].chrIndex = i;
-        ItemToDraw[numThingsToDraw].walkIndex=-1;
-        ItemToDraw[numThingsToDraw].baseLine = baseLine;
-        ItemToDraw[numThingsToDraw].ignoreWB = (getchar->flags & CHF_NOWALKBEHINDS);
-        if (ItemToDraw[numThingsToDraw].ignoreWB)
-        {
-          ItemToDraw[numThingsToDraw].baseLine +=1000;
-        }
-        numThingsToDraw++;
-		}
-      }
-    }
-    i++;
-  }
-
-  //PARSE THE WALKBEHINDS
-  i=1;
-  while (i <= MaxWalkBehinds)
-  {
-    ItemToDraw[numThingsToDraw].objIndex=-1;
-    ItemToDraw[numThingsToDraw].chrIndex=-1;
-    ItemToDraw[numThingsToDraw].baseLine=Walkbehind[i];
-	//Walkbehind[i]=ItemToDraw[numThingsToDraw].baseLine;
-    ItemToDraw[numThingsToDraw].walkIndex=i;
-    numThingsToDraw++;
-    i++;
-  }
-  //PARSE THE WALKBEHINDS
-
-
-  // now bubble sort
-  i = 0;
-  while (i < numThingsToDraw-1)
-  {
-    int j = i+1;
-    while (j < numThingsToDraw)
-    {
-
-      bool cond = ItemToDraw[j].baseLine < ItemToDraw[i].baseLine;
-
-      if (cond)
-      {
-        // swap
-        int objIndex = ItemToDraw[j].objIndex;
-        int chrIndex = ItemToDraw[j].chrIndex;
-        int wlkIndex = ItemToDraw[j].walkIndex;
-        int baseLine = ItemToDraw[j].baseLine;
-
-
-        ItemToDraw[j].objIndex = ItemToDraw[i].objIndex;
-        ItemToDraw[j].chrIndex = ItemToDraw[i].chrIndex;
-        ItemToDraw[j].walkIndex = ItemToDraw[i].walkIndex;
-        ItemToDraw[j].baseLine = ItemToDraw[i].baseLine;
-        ItemToDraw[i].objIndex = objIndex;
-        ItemToDraw[i].chrIndex = chrIndex;
-        ItemToDraw[i].walkIndex = wlkIndex;
-        ItemToDraw[i].baseLine = baseLine;
-
-      }
-      j++;
-    }
-    i++;
-  }
-
-  return numThingsToDraw;
-
-}
-
-int Objindex(int i)
-{
-	return ItemToDraw[i].objIndex;
-}
-
-int Chrindex(int i)
-{
-	return ItemToDraw[i].chrIndex;
-}
-
-int Walkindex(int i)
-{
-	return ItemToDraw[i].walkIndex;
-}
-
-int Baseindex(int i)
-{
-	return ItemToDraw[i].baseLine;
-}
-
-
-
 
 void FireUpdate(int getDynamicSprite, bool Fire2Visible)
 {
@@ -4230,24 +3663,7 @@ void FireUpdate(int getDynamicSprite, bool Fire2Visible)
 
 
 
-  engine->ReleaseBitmapSurface(src);
-  /*
-  int Rf=Random(100);
-
-  if (Rf<50) screen1bg.Tint(255, 128, 0, 100, 100);
-  else screen1bg.Tint(231, 71, 24, 100, 100);
-  if (oFire.X!=0 && oFire.Y!=360)
-  {
-    oFire.X=0;
-    oFire.Y=360;
-  }
-  if (!oFire.Visible)
-  {
-    oFire.Visible=true;
-  }
-  oFire.Transparency=0;
-  oFire.Graphic=screen1bg.Graphic;
-  */
+  engine->ReleaseBitmapSurface(src); 
 
 }
 
@@ -4659,7 +4075,6 @@ void DrawEffect(int sprite_a,int sprite_b,int id,int n)
 
 
 
-char*GameDatavalue[40000];
 
 
 void SaveVariable(char*value,int id)
@@ -4691,10 +4106,7 @@ const char* ReadVariable(int id)
 	}
 }
 
-char*Token[10000];
-int TokenUnUsed[10000];
 
-int usedTokens=0;
 
 
 void SetGDState(char*value,bool setvalue)
@@ -4771,11 +4183,6 @@ int GameDoOnceOnly(char*value)
 	}
 }
 
-//WE WANT A FUNCTION THAT SAVES
-//MUSIC PLAYING, MUSIC POSITION, MUSIC VOLUME
-
-//ALL SFX PLAYING, SFX POSITION, SFX VOLUME
-
 
 
 // ********************************************
@@ -4799,10 +4206,7 @@ void SFX_Play(int SFX, int repeat)
 {
 	PlaySFX(SFX,repeat);
 }
-void SFX_PlayNLP(int SFX,int volume)
-{
-	PlaySFXNoLowPass(SFX, volume);
-}
+
 void SFX_Stop(int SFX,int fademsOUT)
 {
 	SFXStop(SFX,fademsOUT);
@@ -4841,29 +4245,12 @@ int Music_GetVolume()
 	return MusicGetVolume();
 }
 
-int rC(int SFX)
-{
-	//if (SFX==0)	return MFXStream.FadeOut;
-	//else if (SFX==1)	return MFXStream.FadeIn;
-	//else if (SFX==2)	return MFXStream.IsStopped;
-	
-	//GeneralAudio.Disabled=true;
-	//SDL_AudioQuit();
-	//Mix_Quit();
-	//SDL_Quit();
-
-	return 0;
-}
-
 void SFX_SetGlobalVolume(int volume)
 {
 	SFXSetGlobalVolume(volume);
 }
 
-void Music_Stop(int fadoutMS)
-{
-	MusicStop(fadoutMS);
-}
+
 
 void Unload_SFX(int SFX)
 {
@@ -4901,33 +4288,27 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   Character_GetY = (SCAPI_CHARACTER_GETY)engine->GetScriptFunctionAddress("Character::get_Y");
   Character_ID = (SCAPI_CHARACTER_ID)engine->GetScriptFunctionAddress("Character::ID");
 
+
   SDLMain();
   engine->RegisterScriptFunction("DrawScreenEffect", (void*)&DrawScreenEffect);
-  engine->RegisterScriptFunction("SFX_Play",(void*)&SFX_Play);
-  engine->RegisterScriptFunction("SFX_PlayNLP",(void*)&SFX_PlayNLP);
+  engine->RegisterScriptFunction("SFX_Play",(void*)&SFX_Play); 
   engine->RegisterScriptFunction("SFX_SetVolume",(void*)&SFX_SetVolume);
   engine->RegisterScriptFunction("SFX_GetVolume",(void*)&SFX_GetVolume);
   engine->RegisterScriptFunction("Music_Play",(void*)&Music_Play);
   engine->RegisterScriptFunction("Music_GetVolume",(void*)&Music_GetVolume);
   engine->RegisterScriptFunction("Music_SetVolume",(void*)&Music_SetVolume);
   engine->RegisterScriptFunction("SFX_Stop",(void*)&SFX_Stop);
-  engine->RegisterScriptFunction("SFX_SetPosition",(void*)&SFX_SetPosition);
-  engine->RegisterScriptFunction("rC",(void*)&rC);
+  engine->RegisterScriptFunction("SFX_SetPosition",(void*)&SFX_SetPosition);  
   engine->RegisterScriptFunction("SFX_SetGlobalVolume",(void*)&SFX_SetGlobalVolume);
-  engine->RegisterScriptFunction("Music_Stop",(void*)&Music_Stop);
-  engine->RegisterScriptFunction("Unload_SFX",(void*)&Unload_SFX);
   engine->RegisterScriptFunction("Load_SFX",(void*)&Load_SFX);
   engine->RegisterScriptFunction("Audio_Apply_Filter",(void*)&Audio_Apply_Filter);
   engine->RegisterScriptFunction("Audio_Remove_Filter",(void*)&Audio_Remove_Filter);
   engine->RegisterScriptFunction("SFX_AllowOverlap",(void*)&SFX_AllowOverlap);
   engine->RegisterScriptFunction("SFX_Filter",(void*)&SFX_Filter);
   engine->RegisterScriptFunction("DrawBlur",(void*)&DrawBlur);
-  engine->RegisterScriptFunction("SetColorShade",(void*)&SetColorShade);
-  engine->RegisterScriptFunction("DrawCloud",(void*)&DrawCloud);
   engine->RegisterScriptFunction("DrawTunnel",(void*)&DrawTunnel);
   engine->RegisterScriptFunction("DrawCylinder",(void*)&DrawCylinder);
   engine->RegisterScriptFunction("DrawForceField",(void*)&DrawForceField);
-  engine->RegisterScriptFunction("DrawLightning",(void*)&DrawLightning);
   engine->RegisterScriptFunction("Grayscale",(void*)&Grayscale);
   engine->RegisterScriptFunction("ReadWalkBehindIntoSprite",(void*)&ReadWalkBehindIntoSprite);
   engine->RegisterScriptFunction("AdjustSpriteFont",(void*)&AdjustSpriteFont);
@@ -4957,27 +4338,10 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   engine->RegisterScriptFunction("ReverseTransparency",(void*)&ReverseTransparency);
   engine->RegisterScriptFunction("NoiseCreator",(void*)&NoiseCreator);
   engine->RegisterScriptFunction("TintProper",(void*)&TintProper);
-  engine->RegisterScriptFunction("CalculateThings",(void*)&CalculateThings);
-  engine->RegisterScriptFunction("Objindex",(void*)&Objindex);
-  engine->RegisterScriptFunction("Chrindex",(void*)&Chrindex);
-  engine->RegisterScriptFunction("Walkindex",(void*)&Walkindex);
-  engine->RegisterScriptFunction("Baseindex",(void*)&Baseindex);
   engine->RegisterScriptFunction("GetWalkbehindBaserine",(void*)&GetWalkbehindBaserine);
   engine->RegisterScriptFunction("SetWalkbehindBaserine",(void*)&SetWalkbehindBaserine);
 
 
-
-
-
-
-
-  //engine->RegisterScriptFunction("Circle",(void*)&Circle);
-
-
-
-
-
-  //engine->RegisterScriptFunction("",(void*)&);
 
   engine->RequestEventHook(AGSE_PREGUIDRAW);
   engine->RequestEventHook(AGSE_PRESCREENDRAW);
@@ -4997,96 +4361,7 @@ void AGS_EngineStartup(IAGSEngine *lpEngine)
   }
 
 }
-//#include <d3d9.h>
 
-
-
-void AGS_EngineInitGfx(const char *driverID, void *data)
-{
-
-
-	//engine->AbortGame("actually loaded it");
-}
-
-/*
-IDirect3DDevice9*d3ddev9;
-IDirect3DSurface9*_surface;
-BITMAP*grabScreen;
-bool dooncer=false;
-
-void DirectDraw(int data)
-{
-
-        //run a check to disable it from DIRECTDRAW
-  //= (IDirect3DDevice9 *)data;
-
-d3ddev9=NULL;
-d3ddev9 = (IDirect3DDevice9 *)data;
-d3ddev9->GetRenderTarget(0, &_surface);
-d3ddev9->BeginScene();
-
-D3DSURFACE_DESC surfaceDesc;
-D3DLOCKED_RECT lockedRect;
-_surface->LockRect(&lockedRect, 0, 0); // no lock flags specified
-_surface->GetDesc(&surfaceDesc);
-int width = surfaceDesc.Width;
-int height = surfaceDesc.Height;
-int totalR,totalG,totalB;
-
-if (!dooncer)
-{
-	grabScreen=engine->CreateBlankBitmap(width,height,32);
-	dooncer=true;
-}
-unsigned int** pixel_grabScreen = (unsigned int**)engine->GetRawBitmapSurface(grabScreen);
-int src_width=640;
-int src_height=360;
-int src_depth=32;
-engine->GetBitmapDimensions(grabScreen,&src_width,&src_height,&src_depth);
-
-
-D3DCOLOR* imageData = (D3DCOLOR*)lockedRect.pBits;
-for(int y = 0; y < height; y++)
-{
-	for(int x = 0; x < width; x++)
-	{
-
-		int index = y * lockedRect.Pitch / 4 + x ;
-		D3DCOLOR colr= imageData[index];
-
-		int ba = colr % 256;
-		colr /= 256;
-		int ga = colr % 256;
-		colr /= 256;
-		int ra = colr % 256;
-		colr /= 256;
-
-
-		if (ra<0)ra=0;
-		if (ga<0)ga=0;
-		if (ba<0)ba=0;
-
-		if (ra>255)ra=255;
-		if (ga>255)ga=255;
-		if (ba>255)ba=255;
-		//D3DCOLOR value=((256 + r) * 256 + g) * 256 + b;
-
-		pixel_grabScreen[y][x]=SetColorRGBA(ra,ga,ba,255);
-		//imageData[index] = value;//0xffff0050;//value;//value;
-
-
-	}
-}
-engine->ReleaseBitmapSurface(grabScreen);
-//d3ddev9->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_ANISOTROPIC);
-
-//
- //free(imageData);
-_surface->UnlockRect();
-
-d3ddev9->EndScene();
-
-}*/
 
 void AGS_EngineShutdown()
 {
@@ -5094,7 +4369,6 @@ void AGS_EngineShutdown()
 	//soundeffect=null;
 	//Mix_FreeChunk(soundeffect[0]);
 	//Mix_FreeMusic(backmusic);
-	//MusicStop(0);
 	//GeneralAudio.Disabled=true;
 	//AudioPause();
 	/*
@@ -5122,7 +4396,6 @@ int AGS_EngineOnEvent(int event, int data)
   if (event == AGSE_PREGUIDRAW)
   {
 	 Update();
-	 //DirectDraw(data);
   }
   else if (event == AGSE_RESTOREGAME)
   {
@@ -5177,7 +4450,6 @@ int AGS_EngineOnEvent(int event, int data)
 				&& SFX[j].repeat==0)
 			{
 				UnloadSFX(j);
-				//engine->AbortGame("repeated");
 			}
 			i++;
 	    }
@@ -5202,12 +4474,15 @@ int AGS_EngineDebugHook(const char *scriptName, int lineNum, int reserved)
 // ********************************************
 // ***********  Editor Interface  *************
 // ********************************************
-//AGSFlashlight
+
+  
+
+
+
 const char* scriptHeader =
   "import void DrawScreenEffect(int sprite,int sprite_prev,int ide,int n);\r\n"
   "import void PlaySounds();\r\n"
   "import void SFX_Play(int SFX, int repeat);\r\n"
-  "import void SFX_PlayNLP(int SFX,int volume);\r\n"
   "import void SFX_SetVolume(int SFX,int volume);\r\n"
   "import int SFX_GetVolume(int SFX);\r\n"
   "import void Music_Play(int MFX, int repeat,int fadeinMS,int fadeoutMS,int Position, bool fixclick=false);\r\n"
@@ -5215,10 +4490,7 @@ const char* scriptHeader =
   "import int Music_GetVolume();\r\n"
   "import void SFX_Stop(int SFX,int fademsOUT);\r\n"
   "import void SFX_SetPosition(int SFX,int x,int y,int intensity);\r\n"
-  "import int rC(int SFX);\r\n"
   "import void SFX_SetGlobalVolume(int volume);\r\n"
-  "import void Music_Stop(int fadoutMS);\r\n"
-  "import void Unload_SFX(int SFX);\r\n"
   "import void Load_SFX(int SFX);\r\n"
   "import void Audio_Apply_Filter(int Frequency);\r\n"
   "import void Audio_Remove_Filter();\r\n"
@@ -5227,12 +4499,9 @@ const char* scriptHeader =
   "import void Audio_Pause();\r\n"
   "import void Audio_Resume();\r\n"
   "import void DrawBlur(int spriteD,int radius);\r\n"
-  "import void DrawLightning(int spriteD, int scalex, int scaley, float speed,float ady, bool vertical,int id);\r\n"
-  "import void DrawCloud(int spriteD, int scale, float speed);\r\n"
   "import void DrawTunnel(int spriteD, float scale, float speed);\r\n"
   "import void DrawCylinder(int spriteD, int ogsprite);\r\n"
   "import void DrawForceField(int spriteD, int scale, float speed,int id);\r\n"
-  "import void SetColorShade(int Rn,int Gn,int Bn, int idn);\r\n"
   "import void Grayscale(int sprite);\r\n"
   "import void ReadWalkBehindIntoSprite(int sprite,int bgsprite,int walkbehindBaseline);\r\n"
   "import void AdjustSpriteFont(int sprite,int rate,int outlineRed,int outlineGreen,int outlineBlue);\r\n"
@@ -5262,21 +4531,9 @@ const char* scriptHeader =
   "import void ReverseTransparency(int graphic);\r\n"  
   "import void NoiseCreator(int graphic, int setA);\r\n"
   "import void TintProper(int sprite,int lightx,int lighty, int radi,int rex,int grx,int blx);\r\n"
-  "import int CalculateThings(bool clap,int ids);\r\n"
-  "import int Objindex(int i);\r\n"
-  "import int Chrindex(int i);\r\n"
-  "import int Walkindex(int i);\r\n"
-  "import int Baseindex(int i);\r\n"
   "import int GetWalkbehindBaserine(int id);\r\n"
   "import void SetWalkbehindBaserine(int id,int base);\r\n"
-
-
-
-
-
-  //"import void Circle(int lightex,int lightey,int spriteX,int sredec,float degstep,float radius);\r\n"
   ;
-//"import ;\r\n"
 
 IAGSEditor* editor;
 
