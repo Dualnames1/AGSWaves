@@ -810,8 +810,14 @@ void PlaySFX(int SoundToPlay, int repeat)
 	#else
 	if (OGG_Filter && SFX[SoundToPlay].filter==0)
 	{
-	PlaySFXNoLowPass(SoundToPlay+1000,GeneralAudio.SoundValue);
-	return;
+		int snd=SoundToPlay+1000;
+		if (snd == 1034 || snd==1036 || snd==1037 || snd==1038 || snd==1039 || snd==1040
+			|| snd==1053 || snd==1125 || snd==1210 || snd==1237 || snd==1249 || snd==1261
+			|| snd==1423)
+		{
+			PlaySFXNoLowPass(snd,GeneralAudio.SoundValue);
+		}
+		return;
 	}
 	#endif
     if (SFX[SoundToPlay].chunk==NULL)
