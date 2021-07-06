@@ -12,9 +12,9 @@ trigger:
 strategy:
   matrix:
     linux:
-      imageName: 'ubuntu-16.04'
+      imageName: 'ubuntu-latest'
     mac:
-      imageName: 'macos-10.13'
+      imageName: 'macos-10.14'
     windows:
       imageName: 'vs2017-win2016'
 
@@ -117,9 +117,12 @@ steps:
   inputs:
     gitHubConnection: agswaves
     repositoryName: Dualnames1/AGSWaves
-    tagSource: manual
-    tag: $(Build.BuildNumber)      
+    tagSource: 'auto'#manual
+    tag: $(Build.BuildNumber) 
+    # $(tagname)
+    assetUploadMode: 'replace'
+    action: 'edit'     
     assets: |
       $(Build.ArtifactStagingDirectory)/*.dll
       $(Build.ArtifactStagingDirectory)/*.so
-      $(Build.ArtifactStagingDirectory)/*.dylib             
+      $(Build.ArtifactStagingDirectory)/*.dylib    
