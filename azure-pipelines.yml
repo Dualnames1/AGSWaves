@@ -118,8 +118,8 @@ steps:
     gitHubConnection: agswaves
     repositoryName: Dualnames1/AGSWaves
     tagSource: 'auto'#manual
-    tag: $(Build.BuildNumber) 
-    # $(tagname)
+    tag: $(tagname)
+    # 
     assetUploadMode: 'replace'
     action: 'edit'     
     assets: |
