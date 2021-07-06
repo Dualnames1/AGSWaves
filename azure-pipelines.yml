@@ -122,5 +122,4 @@ steps:
     assets: |
       $(Build.ArtifactStagingDirectory)/*.dll
       $(Build.ArtifactStagingDirectory)/*.so
-      $(Build.ArtifactStagingDirectory)/*.dylib       
-         
+      $(Build.ArtifactStagingDirectory)/*.dylib             
