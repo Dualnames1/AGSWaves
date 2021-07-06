@@ -116,7 +116,7 @@ steps:
   displayName: 'Create GitHub Release'  
   inputs:
     tagSource: 'auto'
-    tag: $(tagname)
+    tag: Release 101
     assetUploadMode: 'replace' 
     action: 'edit' 
     gitHubConnection: agswaves
