@@ -56,8 +56,8 @@ steps:
 # macOS
 - bash: |
     pushd ~
-    curl -O https://www.libsdl.org/release/SDL2-2.0.9.dmg
-    curl -O https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.4.dmg
+    curl -O https://www.libsdl.org/release/SDL2-2.0.9.dmg --output SDL2-2.0.9.dmg 
+    curl -O https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.4.dmg --output SDL2_mixer-2.0.4.dmg
     hdiutil attach SDL2-2.0.9.dmg
     sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/
     pushd /Library/Frameworks/SDL2.framework/
