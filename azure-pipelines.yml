@@ -15,6 +15,7 @@ strategy:
       imageName: 'ubuntu-latest'
     mac:
       imageName: 'macos-10.14'
+      arch: 'arm64'
     windows:
       imageName: 'vs2017-win2016'
 
