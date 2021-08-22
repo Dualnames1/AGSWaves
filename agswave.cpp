@@ -1039,7 +1039,8 @@ void MusicPlay(int MusicToPlay, int repeat, int fadeinMS,int fadeoutMS,int pos,b
 
 	MFXStream.FadeRate=float(MusicGetVolume())/float(MFXStream.FadeTime);
 	MFXStream.Channel=0;		
-	Mix_FadeOutMusic(fadeinMS/4);
+	//Mix_FadeOutMusic(fadeinMS/4);
+	Mix_FadeInMusic(musiceffect[currentMusic],currentMusicRepeat,currentMusicFadein);
 	#endif
 	}
 
@@ -1166,7 +1167,7 @@ void Update()
 
 		{
 		  MFXStream.FadeVolume=float(MusicGetVolume());
-		  Mix_FadeInMusic(musiceffect[currentMusic],currentMusicRepeat,currentMusicFadein);
+		  //Mix_FadeInMusic(musiceffect[currentMusic],currentMusicRepeat,currentMusicFadein);
 		  MFXStream.Channel=-1;
 
 		}								  
